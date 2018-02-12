@@ -1,33 +1,19 @@
-import
-  from "crt.lib"
-   PrintLn "PRINTLN"
-   InputLn "INPUTLN"
-  end from
-end import
+import PrintLn "crt.lib" "PRINTLN"
+import InputLn "crt.lib" "INPUTLN"
 
 
-const
-  str Hello "Hello, what's your name?"
-  str Hello_Guy "You good guy, "
-end const
+str Hello "Hello, what's your name?"
+str Hello_Guy "You good guy, "
 
 
-code
-  EntryPoint:
-	pushc Hello
-	gpm
-	pushc PrintLn
-    gpm
-	invoke
-	pushc InputLn
-	gpm
-	invoke
-    gpm
-	pushc Hello_Guy
-	gpm
-	add
-	pushc PrintLn
-	gpm
-	invoke
-	gc
-end code
+Main:
+  push !Hello
+  push !PrintLn
+  invoke
+  push !InputLn
+  invoke
+  push !Hello_Guy
+  add
+  push !PrintLn
+  invoke
+  gc
