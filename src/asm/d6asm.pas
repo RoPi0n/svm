@@ -1,6 +1,7 @@
 program d6asm;
 {$Apptype console}
 {$Mode objfpc}
+{$H+}
 
 uses SysUtils, Classes;
 
@@ -97,6 +98,14 @@ begin
   s.WriteByte(PByte(@c)^);
 end;
 
+procedure St_WriteInt64(s:TStream; i:Int64);
+begin
+  s.WriteByte(PByte(@i+3)^);
+  s.WriteByte(PByte(@i+2)^);
+  s.WriteByte(PByte(@i+1)^);
+  s.WriteByte(PByte(@i)^);
+end;
+
 procedure St_WriteDouble(s:TStream; d:double);
 begin
   s.WriteByte(PByte(@d+7)^);
@@ -140,6 +149,8 @@ type
      Lines:TStringList;
      constructor Create(sl:TStringList);
      destructor Destroy; override;
+     function GetLibIndx(l_path:string):integer;
+     procedure AddMethod(l_path,m_name,exm_name:string);
      procedure ParseSection;
      procedure GenerateCode(Stream:TStream);
   end;
@@ -176,9 +187,18 @@ type
      procedure GenerateCode(Stream:TStream);
   end;
 
+  TVarManager = class(TObject)
+    public
+     DefinedVars: TStringList;
+     constructor Create;
+     destructor Destroy; override;
+     procedure DefVar(name:string);
+     function Get(name:string):cardinal;
+  end;
+
   TCodeSection = class(TObject)
     public
-     Src, Lines: TStringList;
+     Lines: TStringList;
      Constants: TConstantManager;
      Outp: TMemoryStream;
      constructor Create(sl:TStringList; cnsts:TConstantManager);
@@ -186,6 +206,349 @@ type
      procedure ParseSection;
      procedure GenerateCode(Stream:TStream);
   end;
+
+{** Public variables **}
+
+var
+  IncludedFiles: TStringList;
+
+{** Preprocessor **}
+
+function IsVar(s:string):boolean;
+begin
+  Result := false;
+  if length(s)>0 then
+  if s[1] = '$' then
+   begin
+     delete(s,1,1);
+     Result := CheckName(s);
+   end;
+end;
+
+function GetVar(s:string; varmgr:TVarManager):string;
+begin
+  if IsVar(s) then
+   begin
+    delete(s,1,1);
+    Result := IntToStr(varmgr.Get(s));
+   end
+  else
+   AsmError('Invalid variable call "'+s+'".');
+end;
+
+function IsConst(s:string):boolean;
+begin
+  Result := false;
+  if length(s)>0 then
+  if s[1] = '!' then
+   begin
+     delete(s,1,1);
+     Result := CheckName(s);
+   end;
+end;
+
+function GetConst(s:string):string;
+begin
+  if IsConst(s) then
+   begin
+    delete(s,1,1);
+    Result := s;
+   end
+  else
+   AsmError('Invalid constant call "'+s+'".');
+end;
+
+function IsArr(s:string):boolean;
+var
+  cnt:integer;
+begin
+  Result := false;
+  if length(s)>0 then
+  if (pos('[',s)>0) and (pos(']',s)>0) then
+   begin
+     Result := true;
+     cnt := 0;
+     while length(s)>0 do
+      begin
+        case s[1] of
+         '[': inc(cnt);
+         ']': dec(cnt);
+        end;
+        delete(s,1,1);
+      end;
+     Result := Result and (cnt = 0);
+   end;
+end;
+
+function GetArrLvl(s:string):cardinal;
+var
+  cnt:integer;
+begin
+  Result := 0;
+  if (pos('[',s)>0) and (pos(']',s)>0) then
+   begin
+     cnt := 0;
+     while length(s)>0 do
+      begin
+        case s[1] of
+         '[': inc(cnt);
+         ']': dec(cnt);
+        end;
+        if (s[1] = ']') and (cnt = 0) then
+         inc(Result);
+        delete(s,1,1);
+      end;
+   end;
+end;
+
+function GetArrLvlVal(s:string; indx:cardinal):string;         //!!!!!
+var
+  cnt:integer;
+  i:cardinal;
+begin
+  Result := '';
+  i := 0;
+  if indx < 1 then
+   exit;
+  if (pos('[',s)>0) and (pos(']',s)>0) then
+   begin
+     cnt := 0;
+     while length(s)>0 do
+      begin
+        case s[1] of
+         '[': inc(cnt);
+         ']': dec(cnt);
+        end;
+        if (s[1] = ']') and (cnt = 0) then
+         inc(i);
+        delete(s,1,1);
+        if i = indx-1 then
+         begin
+           while length(s)>0 do
+            begin
+              case s[1] of
+               '[': inc(cnt);
+               ']': dec(cnt);
+              end;
+              if (s[1] = ']') and (cnt = 0) then
+               break;
+              Result := Result + s[1];
+              delete(s,1,1);
+            end;
+           break;
+         end;
+      end;
+   end;
+end;
+
+function GetArrName(s:string):string;
+begin
+  Result := copy(s,1,pos('[',s)-1);
+end;
+
+function PreprocessVarAction(varexpr, action:string; varmgr:TVarManager):string;
+begin
+  Result := action + ' ' + GetVar(varexpr, varmgr);
+end;
+
+function PreprocessArrAction(arrexpr, action:string; varmgr:TVarManager):string;
+var
+  c,lvl:cardinal;
+  s:string;
+begin
+  Result := '';
+  lvl := GetArrLvl(arrexpr);
+  for c := 1 to lvl+1 do
+   begin
+     s := GetArrLvlVal(arrexpr, c);
+     if IsVar(s) then
+      Result := Result + sLineBreak + PreprocessVarAction(s,'push',varmgr);
+     if IsConst(s) then
+      Result := Result + sLineBreak + 'pushc '+GetConst(s);
+     if IsArr(s) then
+      Result := Result + sLineBreak + PreprocessArrAction(s,'pushai',varmgr);
+   end;
+  for c := 0 to lvl do
+   Result := Result + sLineBreak + 'push ' + GetVar(GetArrName(arrexpr),varmgr) + sLineBreak + action;
+end;
+
+function CountVarDefs(s:string):cardinal;
+begin
+  s := Trim(s);
+  Result := 0;
+  if Length(s)>0 then
+   Result := 1
+  else
+   Exit;
+  while Length(s)>0 do
+   begin
+     if s[1] = ',' then
+      inc(Result);
+     delete(s,1,1);
+   end;
+end;
+
+function GetVarDef(s:string; indx:integer):string;
+begin
+  s := Trim(s);
+  Result := '';
+  while Length(s)>0 do
+   begin
+     if (s[1] = ',') and (indx = 0) then
+      break;
+     if s[1] = ',' then
+      begin
+        dec(indx);
+        delete(s,1,1);
+      end;
+     if (indx = 0) and (Length(s)>0) then
+      Result := Result + s[1];
+     if Length(s)>0 then
+      delete(s,1,1);
+   end;
+end;
+
+function PreprocessVarDefine(s:string; varmgr:TVarManager):string;
+var
+  v:string;
+begin
+  Result := '';
+  s := Trim(s);
+  if s = '' then
+   exit;
+  if pos('=',s)>0 then
+   begin
+    v := Trim(copy(s,1,pos('=',s)-1));
+    delete(s,1,pos('=',s));
+    s := Trim(s);
+    if IsVar(s) then
+     Result := PreprocessVarAction(s,'push',varmgr);
+    if IsConst(s) then
+      Result := Result + sLineBreak + 'pushc '+GetConst(s);
+    if IsArr(s) then
+     Result := PreprocessArrAction(s,'pushai',varmgr);
+    varmgr.DefVar(v);
+    Result := Result + sLineBreak + 'peek ' + GetVar('$'+v,varmgr) + sLineBreak + 'pop';
+   end
+  else
+   varmgr.DefVar(s);
+end;
+
+function PreprocessVarDefines(s:string; varmgr:TVarManager):string;
+var
+  c,cnt: cardinal;
+  df: string;
+begin
+  Result := '';
+  cnt := CountVarDefs(s);
+  for c := 0 to cnt-1 do
+   begin
+     df := GetVarDef(s,c);
+     Result := Result + sLineBreak + PreprocessVarDefine(df,varmgr);
+   end;
+end;
+
+function PreprocessStr(s:string; varmgr:TVarManager):string;
+var
+  sl:TStringList;
+  c:cardinal;
+begin
+  Result := '';
+  {** Include **}
+  if Tk(s,1) = 'include' then
+   begin
+     delete(s,1,length('include'));
+     s := Trim(s);
+     case s[1] of
+      '"':begin
+            delete(s,1,1);
+            if pos('"',s)<>Length(s) then
+             AsmError('Invalid construction: "import "'+s+'".');
+            delete(s,length(s),1);
+            if not FileExists(s) then
+             AsmError('File "'+s+'" not found.');
+            sl := TStringList.Create;
+            sl.LoadFromFile(s);
+            if sl.Count>0 then
+             begin
+               for c := 0 to sl.Count-1 do
+                sl[c] := TrimCodeStr(sl[c]);
+               for c:=sl.count-1 downto 0 do
+                if trim(sl[c])='' then sl.delete(c);
+             end;
+            Result := sl.Text + sLineBreak;
+            FreeAndNil(sl);
+          end;
+      '<':begin
+            delete(s,1,1);
+            if pos('<',s)<>Length(s) then
+             AsmError('Invalid construction: "import <'+s+'".');
+            delete(s,length(s),1);
+            if not FileExists(s) then
+             AsmError('File "'+s+'" not found.');
+            if IncludedFiles.IndexOf(s) = -1 then
+             begin
+               IncludedFiles.Add(s);
+               sl := TStringList.Create;
+               sl.LoadFromFile(s);
+               if sl.Count>0 then
+                begin
+                  for c := 0 to sl.Count-1 do
+                   sl[c] := TrimCodeStr(sl[c]);
+                  for c:=sl.count-1 downto 0 do
+                   if trim(sl[c])='' then sl.delete(c);
+                end;
+               Result := sl.Text + sLineBreak;
+               FreeAndNil(sl);
+             end;
+          end;
+      else
+        AsmError('Invalid construction: "import '+s+'".');
+     end;
+   end
+  else
+  {** Var **}
+  if Tk(s,1) = 'var' then
+   begin
+     delete(s,1,length('var'));
+     s := Trim(s);
+     Result := PreprocessVarDefines(s,varmgr);
+   end
+  else
+  {** Anything **}
+  if (pos('$',s)>0) or (pos('!',s)>0) then
+   begin
+     // push $a
+     // push $a[expr 1][expr 2]..[expr n]
+     if Tk(s,1) = 'push' then
+      begin
+        delete(s,1,length('push'));
+        s := Trim(s);
+        if IsVar(s) then
+         Result := PreprocessVarAction(s,'push',varmgr);
+        if IsConst(s) then
+         Result := Result + sLineBreak + 'pushc '+GetConst(s);
+        if IsArr(s) then
+         Result := PreprocessArrAction(s,'pushai',varmgr);
+      end
+     else
+     if Tk(s,1) = 'peek' then
+      begin
+        delete(s,1,length('peek'));
+        s := Trim(s);
+        if IsVar(s) then
+         Result := PreprocessVarAction(s,'peek',varmgr);
+        if IsConst(s) then
+         AsmError('Peek in constant value "'+s+'"');
+        if IsArr(s) then
+         Result := PreprocessArrAction(s,'peekai',varmgr);
+      end
+     else
+     Result := s;
+   end
+  else
+   Result := s;
+end;
 
 {** ImportLibrary **}
 
@@ -220,43 +583,68 @@ begin
   if Libs.Count>0 then
    for w := 0 to Libs.Count-1 do
     TImportLibrary(Libs[w]).Free;
-  Libs.Free;
+  FreeAndNil(Libs);
   inherited Destroy;
+end;
+
+function TImportSection.GetLibIndx(l_path:string):integer;
+var
+  w:word;
+  c:cardinal;
+begin
+  Result := -1;
+  c := 0;
+  while c<Libs.Count do
+   begin
+     if TImportLibrary(Libs[c]).LibraryPath = l_path then
+      begin
+        Result := c;
+        break;
+      end;
+     inc(c);
+   end;
+end;
+
+procedure TImportSection.AddMethod(l_path,m_name,exm_name:string);
+var
+  lb_indx: integer;
+begin
+  lb_indx := GetLibIndx(l_path);
+  if lb_indx<>-1 then
+   begin
+     with TImportLibrary(Libs[lb_indx]) do
+      begin
+        if Methods.IndexOf(m_name)<>-1 then
+         AsmError('Dublicate import "'+m_name+'", from "'+l_path+'":"'+exm_name+'"');
+        Methods.Add(m_name);
+        Imports.Add(exm_name);
+      end;
+   end
+  else
+   begin
+     Libs.Add(TImportLibrary.Create(l_path));
+     with TImportLibrary(Libs[Libs.Count-1]) do
+      begin
+        Methods.Add(m_name);
+        Imports.Add(exm_name);
+      end;
+   end;
 end;
 
 procedure TImportSection.ParseSection;
 var
-  p1,p2:cardinal;
-  lib:TImportLibrary;
+  c:cardinal;
 begin
-  if Lines.Count>0 then
-    while Lines.IndexOf('import')<>-1 do
-     begin
-       p1 := Lines.IndexOf('import');
-       p2 := p1+1;
-       while Lines[p2] <> 'end import' do
-        begin
-          if Tk(Lines[p2],1) = 'from' then
-            begin
-              lib := TImportLibrary.Create(Tk(Lines[p2],2));
-              inc(p2);
-              while Lines[p2] <> 'end from' do
-               begin
-                 if lib.Methods.IndexOf(Tk(Lines[p2],1))<>-1 then
-                   AsmError('Dublicare import "'+Tk(Lines[p2],1)+'", from: "'+lib.LibraryPath+'":"'
-                            +Tk(Lines[p2],2)+'"');
-                 lib.Methods.Add(Tk(Lines[p2],1));
-                 lib.Imports.Add(Tk(Lines[p2],2));
-                 inc(p2);
-               end;
-              libs.Add(lib);
-            end;
-          inc(p2);
-        end;
-       while Lines[p1] <> 'end import' do
-        Lines.Delete(p1);
-       Lines.Delete(p1);
-     end;
+  c := 0;
+  while c<Lines.Count do
+   begin
+     if Tk(Lines[c],1) = 'import' then
+      begin
+        AddMethod(Tk(Lines[c],3),Tk(Lines[c],2),Tk(Lines[c],4));
+        Lines[c] := '';
+      end;
+     inc(c);
+   end;
 end;
 
 procedure TImportSection.GenerateCode(Stream:TStream);
@@ -378,8 +766,10 @@ function TConstantManager.GetAddr(c_name:string):cardinal;
 var
   c:cardinal;
 begin
+  if pos(sLineBreak,c_name)>0 then
+   c_name := copy(c_name,1,pos(slinebreak,c_name)-1);
   if Constants.Count = 0 then
-   AsmError('Invalid call "'+c_name+'"');
+   AsmError('Invalid constant call "'+c_name+'".');
   for c := 0 to Constants.Count-1 do
    begin
      if TConstant(Constants[c]).c_name = c_name then
@@ -389,65 +779,59 @@ begin
       end
      else
       if c = Constants.Count-1 then
-       AsmError('Invalid call "'+c_name+'"');
+       AsmError('Invalid constant call "'+c_name+'"');
    end;
 end;
 
 procedure TConstantManager.ParseSection;
 var
-  p1,p2:cardinal;
+  c:cardinal;
   Constant:TConstant;
 begin
-  if Lines.Count>0 then
-    while Lines.IndexOf('const')<>-1 do
-     begin
-       p1 := Lines.IndexOf('const');
-       p2 := p1+1;
-       while Lines[p2] <> 'end const' do
-        begin
-          if Tk(Lines[p2],1) = 'word' then
-           begin
-             Constant := TConstant.Create;
-             Constant.c_name := Tk(Lines[p2],2);
-             Constant.c_type := ctUnsigned64;
-             St_WriteCardinal(Constant.c_value, StrToQWord(Tk(Lines[p2],3)));
-             Constants.Add(Constant);
-           end
-          else
-          if Tk(Lines[p2],1) = 'int' then
-           begin
-             Constant := TConstant.Create;
-             Constant.c_name := Tk(Lines[p2],2);
-             Constant.c_type := ctInt64;
-             St_WriteCardinal(Constant.c_value, Cardinal(StrToInt64(Tk(Lines[p2],3))));
-             Constants.Add(Constant);
-           end
-          else
-          if Tk(Lines[p2],1) = 'real' then
-           begin
-             Constant := TConstant.Create;
-             Constant.c_name := Tk(Lines[p2],2);
-             Constant.c_type := ctDouble;
-             St_WriteDouble(Constant.c_value, Double(StrToFloat(Tk(Lines[p2],3))));
-             Constants.Add(Constant);
-           end
-          else
-          if Tk(Lines[p2],1) = 'str' then
-           begin
-             Constant := TConstant.Create;
-             Constant.c_name := Tk(Lines[p2],2);
-             Constant.c_type := ctString;
-             Constant.c_value.WriteBuffer(Tk(Lines[p2],3)[1],Length(Tk(Lines[p2],3)));
-             Constants.Add(Constant);
-           end
-          else
-           AsmError('Undefined constant type: "'+Tk(Lines[p2],1)+'"');
-          inc(p2);
-        end;
-       while Lines[p1] <> 'end const' do
-        Lines.Delete(p1);
-       Lines.Delete(p1);
-     end;
+  c := 0;
+  while c<Lines.Count do
+   begin
+     if Tk(Lines[c],1) = 'word' then
+      begin
+        Constant := TConstant.Create;
+        Constant.c_name := Tk(Lines[c],2);
+        Constant.c_type := ctUnsigned64;
+        St_WriteCardinal(Constant.c_value, StrToQWord(Tk(Lines[c],3)));
+        Constants.Add(Constant);
+        Lines[c] := '';
+      end
+     else
+     if Tk(Lines[c],1) = 'int' then
+      begin
+        Constant := TConstant.Create;
+        Constant.c_name := Tk(Lines[c],2);
+        Constant.c_type := ctInt64;
+        St_WriteInt64(Constant.c_value, StrToInt(Tk(Lines[c],3)));
+        Constants.Add(Constant);
+        Lines[c] := '';
+      end
+     else
+     if Tk(Lines[c],1) = 'real' then
+      begin
+        Constant := TConstant.Create;
+        Constant.c_name := Tk(Lines[c],2);
+        Constant.c_type := ctDouble;
+        St_WriteDouble(Constant.c_value, Double(StrToFloat(Tk(Lines[c],3))));
+        Constants.Add(Constant);
+        Lines[c] := '';
+      end
+     else
+     if Tk(Lines[c],1) = 'str' then
+      begin
+        Constant := TConstant.Create;
+        Constant.c_name := Tk(Lines[c],2);
+        Constant.c_type := ctString;
+        Constant.c_value.WriteBuffer(Tk(Lines[c],3)[1],Length(Tk(Lines[c],3)));
+        Constants.Add(Constant);
+        Lines[c] := '';
+      end;
+     inc(c);
+   end;
 end;
 
 procedure TConstantManager.CheckForDoubles;
@@ -513,11 +897,41 @@ begin
    TConstant(Constants[c]).GenerateCode(Stream);
 end;
 
+{** Variables **}
+
+constructor TVarManager.Create;
+begin
+ DefinedVars := TStringList.Create;
+ inherited Create;
+end;
+
+destructor TVarManager.Destroy;
+begin
+ FreeAndNil(DefinedVars);
+ inherited Destroy;
+end;
+
+procedure TVarManager.DefVar(name:string);
+begin
+ if not CheckName(name) then
+  AsmError('Invalid variable name "'+name+'".');
+ if DefinedVars.IndexOf(name) = -1 then
+  DefinedVars.Add(name)
+ else
+  AsmError('Trying to redefine variable "'+name+'".');
+end;
+
+function TVarManager.Get(name:string):cardinal;
+begin
+ Result := DefinedVars.IndexOf(name);
+ if Result = -1 then
+  AsmError('Invalid variable call "'+name+'".');
+end;
+
 {** Code section **}
 
 constructor TCodeSection.Create(sl:TStringList; cnsts:TConstantManager);
 begin
-  Src := TStringList.Create;
   Outp := TMemoryStream.Create;
   Lines := sl;
   Constants := cnsts;
@@ -526,7 +940,6 @@ end;
 
 destructor TCodeSection.Destroy;
 begin
-  Src.Free;
   Outp.Free;
   inherited Destroy;
 end;
@@ -553,6 +966,7 @@ type TComand = (
    bcSHR,    // [top] = [top] shr [top-1]
    bcSHL,    // [top] = [top] shl [top-1]
 
+   bcNEG,    // [top] = -[top]
    bcINC,    // [top]++
    bcDEC,    // [top]--
    bcADD,    // [top] = [top] + [top-1]
@@ -609,30 +1023,15 @@ var
   p1,p2:cardinal;
   s:string;
 begin
-  Src.Clear;
-  if Lines.Count>0 then
-   while Lines.IndexOf('code')<>-1 do
-     begin
-       p1 := Lines.IndexOf('code');
-       p2 := p1+1;
-       while Lines[p2] <> 'end code' do
-        begin
-          Src.Add(Lines[p2]);
-          inc(p2);
-        end;
-       while Lines[p1] <> 'end code' do
-        Lines.Delete(p1);
-       Lines.Delete(p1);
-     end;
   p1 := 0;
   p2 := 0;
-  while p2<Src.Count do
+  while p2<Lines.Count do
    begin
-     s := Src[p2];
+     s := Lines[p2];
      if (s[length(s)] = ':') then
       begin
         Constants.AddConstCardinal(copy(s,1,length(s)-1),p1);
-        Src.Delete(p2);
+        Lines.Delete(p2);
         dec(p2);
         dec(p1);
       end;
@@ -643,10 +1042,10 @@ begin
        inc(p1);
      inc(p2);
    end;
-  while Src.Count>0 do
+  while Lines.Count>0 do
    begin
-    s := Src[0];
-    Src.Delete(0);
+    s := Lines[0];
+    Lines.Delete(0);
     if Tk(s,1) = 'push' then
      begin
        Outp.WriteByte(byte(bcPH));
@@ -719,6 +1118,9 @@ begin
     if Tk(s,1) = 'shl' then
      Outp.WriteByte(byte(bcSHL))
     else
+    if Tk(s,1) = 'neg' then
+     Outp.WriteByte(byte(bcNEG))
+    else
     if Tk(s,1) = 'inc' then
      Outp.WriteByte(byte(bcINC))
     else
@@ -743,16 +1145,16 @@ begin
     if Tk(s,1) = 'idiv' then
      Outp.WriteByte(byte(bcIDIV))
     else
-	if Tk(s,1) = 'mov' then
+    if Tk(s,1) = 'mov' then
      Outp.WriteByte(byte(bcMV))
     else
-	if Tk(s,1) = 'movbp' then
+    if Tk(s,1) = 'movbp' then
      Outp.WriteByte(byte(bcMVBP))
     else
-	if Tk(s,1) = 'movp' then
+    if Tk(s,1) = 'movp' then
      Outp.WriteByte(byte(bcMVP))
     else
-    if Tk(s,1) = 'memsz' then
+    if Tk(s,1) = 'msz' then
      Outp.WriteByte(byte(bcMS))
     else
     if Tk(s,1) = 'new' then
@@ -767,22 +1169,22 @@ begin
     if Tk(s,1) = 'rem' then
      Outp.WriteByte(byte(bcRM))
     else
-    if Tk(s,1) = 'newarr' then
+    if Tk(s,1) = 'newa' then
      Outp.WriteByte(byte(bcNA))
     else
     if Tk(s,1) = 'sizeof' then
      Outp.WriteByte(byte(bcSF))
     else
-    if Tk(s,1) = 'arrlen' then
+    if Tk(s,1) = 'alen' then
      Outp.WriteByte(byte(bcAL))
     else
-    if Tk(s,1) = 'setarrlen' then
+    if Tk(s,1) = 'salen' then
      Outp.WriteByte(byte(bcSL))
     else
-    if Tk(s,1) = 'arritmpush' then
+    if Tk(s,1) = 'pushai' then
      Outp.WriteByte(byte(bcPA))
     else
-    if Tk(s,1) = 'arritmpeek' then
+    if Tk(s,1) = 'peekai' then
      Outp.WriteByte(byte(bcSA))
     else
     if Tk(s,1) = 'gpm' then
@@ -797,10 +1199,10 @@ begin
     if Tk(s,1) = 'invoke' then
      Outp.WriteByte(byte(bcINV))
     else
-    if Tk(s,1) = 'invokebyptr' then
+    if Tk(s,1) = 'invokebp' then
      Outp.WriteByte(byte(bcINVBP))
     else
-    if Tk(s,1) = 'pnull' then
+    if Tk(s,1) = 'pushn' then
      Outp.WriteByte(byte(bcPHN))
     else
     if Tk(s,1) = 'cthr' then
@@ -824,13 +1226,13 @@ begin
     if Tk(s,1) = 'trr' then
      Outp.WriteByte(byte(bcTRR))
     else
-    if Tk(s,1) = 'phs' then
+    if Tk(s,1) = 'pushb' then
      Outp.WriteByte(byte(bcPHS))
     else
-    if Tk(s,1) = 'pks' then
+    if Tk(s,1) = 'peekb' then
      Outp.WriteByte(byte(bcPKS))
     else
-    if Tk(s,1) = 'pps' then
+    if Tk(s,1) = 'popb' then
      Outp.WriteByte(byte(bcPPS))
     else
      if Length(s)>0 then
@@ -844,11 +1246,11 @@ begin
 end;
 
 {** Main **}
-
 var
   Code: TStringList;
   c:cardinal;
   Output:TFileStream;
+  varmgr:TVarManager;
   Imports:TImportSection;
   Constants:TConstantManager;
   CodeSection:TCodeSection;
@@ -856,51 +1258,60 @@ begin
  if ParamCount=0 then
   begin
     writeln('Assembler for SVM.');
-    writeln('use: ',ExtractFileName(ParamStr(0)),' <file>');
+    writeln('Use: ',ExtractFileName(ParamStr(0)),' <file>');
     halt;
   end;
+ IncludedFiles := TStringList.Create;
  Code := TStringList.Create;
  Code.LoadFromFile(ParamStr(1));
  if Code.Count>0 then
    for c := 0 to Code.Count-1 do
     Code[c] := TrimCodeStr(Code[c]);
+ {for c:=code.count-1 downto 0 do
+  if trim(code[c])='' then code.delete(c);}
  c := 0;
+ varmgr := TVarManager.Create;
  while c<Code.Count do
   begin
-    if Code[c] = '' then
-     Code.Delete(c)
-    else
-     inc(c);
+    if Trim(Code[c]) <> '' then
+     Code[c] := Trim(PreprocessStr(Code[c],varmgr));
+    inc(c);
   end;
+ code.text := 'word calculated_addr_table_size '+inttostr(varmgr.DefinedVars.Count)+sLineBreak+
+              'pushc calculated_addr_table_size'+sLineBreak+
+              'gpm'+sLineBreak+
+              'msz'+sLineBreak+
+              'gc'+sLineBreak+
+              'pushc main'+slinebreak+
+              'gpm'+slinebreak+
+              'jp'+sLineBreak+code.text;
+ code.SaveToFile('buf.tmp');      // Хз почему, но без этого не работает...
+ code.LoadFromFile('buf.tmp');    //
+ DeleteFile('buf.tmp');
  if Code.Count>0 then
   begin
     Output := TFileStream.Create(ChangeFileExt(ParamStr(1),'.vmc'),fmCreate);
     Imports := TImportSection.Create(Code);
-    WriteLn('Parsing import section...');
     Imports.ParseSection;
-    Writeln('Generate bytecode of the import section...');
     Imports.GenerateCode(Output);
     Constants := TConstantManager.Create(Code);
-    WriteLn('Parsing constant''s section...');
     Constants.ParseSection;
-    Writeln('Generate bytecode of the constant''s section...');
     Constants.AppendImports(Imports);
+    for c:=code.count-1 downto 0 do
+     if trim(code[c])='' then code.delete(c);
     CodeSection := TCodeSection.Create(Code, Constants);
-    Writeln('Parsing code section...');
     CodeSection.ParseSection;
-    Writeln('Refractoring constant''s section...');
     Constants.CheckForDoubles;
-    Writeln('Generate bytecode of the constant''s section...');
     Constants.GenerateCode(Output);
-    Writeln('Generate bytecode of the code section...');
     CodeSection.GenerateCode(Output);
     writeln('Success.');
     writeln('Executable file size: ',Output.Size,' bytes.');
-    Imports.Free;
-    Constants.Free;
-    CodeSection.Free;
-    Output.Free;
+    FreeAndNil(Imports);
+    FreeAndNil(Constants);
+    FreeAndNil(CodeSection);
+    FreeAndNil(Output);
   end;
- Code.Free;
+ FreeAndNil(Code);
+ FreeAndNil(IncludedFiles);
 end.
 
