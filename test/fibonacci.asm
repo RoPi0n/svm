@@ -1,76 +1,60 @@
-import
-  from "crt.lib"
-   PrintLn "PRINTLN"
-  end from
-end import
+import PrintLn "crt.lib" "PRINTLN"
 
 
-const
-  int Zero    0
-  int FbLoops 40
-  int MemSize 7
-  int I 3
-  int V1 1
-end const
+int Zero    0
+int FbLoops 40
+int I 3
+int V1 1
 
+var a,b,c,d,e,println,lp1
 
-code
-  EntryPoint:
-    pushc MemSize
-	gpm
-	memsz
-	gc
-	pushc I
-	peek 0
-	pop
-	pushc FbLoops
-	peek 1
-	pop
-	pushc Lp1
-	peek 2
-	pop
-	pushc PRINTLN
-	peek 3
-	pop
-	pushc Zero
-	peek 4  
-	gpm
-	push 3
+Main:
+  push !I
+  peek $a
+  pop
+  pushc FbLoops
+  peek $b
+  pop
+  push !Lp1
+  peek $Lp1
+  pop
+  push !PRINTLN
+  peek $println
+  pop
+  pushc Zero
+  peek $c  
+  gpm
+  push $println
+  invoke
+  pushc V1
+  peek $d
+  gpm
+  push $println
+  invoke
+  new
+  gpm
+  peek $e 
+  pop
+  Lp1:
+    push $d
+    push $e
+    mov
+	  
+	push $c
+	push $d
+	add
+	 
+	push $e
+	push $c
+	mov
+	  
+	push $d
+	push $println
 	invoke
-	pushc V1
-	peek 5 
-	gpm
-	push 3
-	invoke
-	new
-	gpm
-	peek 6 
-	pop
-	Lp1:
-	  push 5
-	  push 6
-      mov
-	  
-	  push 4
-	  push 5
-	  add
-	  
-	  push 6
-	  push 4
-	  mov
-	  
-	  push 5
-	  push 3
-	  invoke
-	  
-	  push 2
-	  push 1
-	  push 0
-	  inc
-	  bg
-	jz
-  pushc EndPoint
-  jp
-  
-  EndPoint:
-end code
+	 
+	push $Lp1
+	push $b
+	push $a
+	inc
+	bg
+  jz
