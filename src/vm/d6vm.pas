@@ -30,6 +30,7 @@ type
     bcSHR,    // [top] = [top] shr [top-1]
     bcSHL,    // [top] = [top] shl [top-1]
 
+    bcNEG,    // [top] = -[top]
     bcINC,    // [top]++
     bcDEC,    // [top]--
     bcADD,    // [top] = [top] + [top-1]
@@ -771,6 +772,13 @@ type
               p := self.stack.popv;
               PMem(p)^ := PMem(p)^ shl PMem(self.stack.popv)^;
               self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcNEG:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := -PMem(p)^;
               Inc(self.ip);
             end;
 
