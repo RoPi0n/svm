@@ -1,59 +1,46 @@
-import
-  from "crt.lib"
-   PrintLn "PRINTLN"
-  end from
-end import
+import PrintLn "crt.lib" "PRINTLN"
 
 
-const
-  str Thr1Message "I'm thread #1!"
-  str Thr2Message "I'm thread #2!"
-  int MemSize 3
-  int Thread2MemSize 3
-end const
+str Thr1Message "I'm thread #1!"
+str Thr2Message "I'm thread #2!"
 
+var ThrMsg, OutpFnc, PrintLn
 
-code
-  EntryPoint:
-    pushc MemSize
+Thread2Method:
+    push !__addrtsz
 	gpm
-	memsz
+	msz
 	gc
-	pushc Thr1Message
-	peek 0                       ; [0] = "I'm thread #1!"
+	push !Thr2Message
+	peek $ThrMsg
 	pop
-	pushc PrintLn                ; [2] = @println
-	peek 1
+	push !PrintLn
+	peek $PrintLn
 	pop
-	pushc OutputFunction
-	peek 2                       ; [3] = @Thread1Method
+	push !OutputFunction
+	peek $OutpFnc
 	pop
-	pnull
-	pushc Thread2Method         
-	cthr                         ; [top] = createthread(@Thread2Method, null)
-	rthr                         ; runthread([top])
+	push $OutpFnc
+	jp
 	
-  OutputFunction:
-    push 0
-	push 1
+Main:
+	push !Thr1Message
+	peek $ThrMsg
+	pop
+	push !PrintLn
+	peek $PrintLn
+	pop
+	push !OutputFunction
+	peek $OutpFnc
+	pop
+	push !null
+	push !Thread2Method         
+	cthr
+	rthr
+	
+OutputFunction:
+    push $ThrMsg
+	push $PrintLn
 	invoke
-	push 2
+	push $OutpFnc
 	jp
-
-  Thread2Method:
-    pushc Thread2MemSize
-	gpm
-	memsz
-	gc
-	pushc Thr2Message
-	peek 0                       ; [0] = "I'm thread #2!"
-	pop
-	pushc PrintLn                ; [2] = @println
-	peek 1
-	pop
-	pushc OutputFunction
-	peek 2                       ; [3] = @Thread1Method
-	pop
-	push 2
-	jp
-end code
