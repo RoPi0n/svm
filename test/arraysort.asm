@@ -1,248 +1,128 @@
-import
-  from "crt.lib"
-   PrintLn "PRINTLN"
-   Print   "PRINT"
-  end from
-end import
+import PrintLn "crt.lib" "PRINTLN"
+import Print "crt.lib" "PRINT"
+
+int  MemSz  9
+int  Zero   0
+int  ArrSz  10
+int  ArrLvl 1
+int  a_0  7
+int  a_1  5
+int  a_2  93
+int  a_3  17
+int  a_4  23
+int  a_5  8
+int  a_6  13
+int  a_7  42
+int  a_8  3
+int  a_9  65
+str  ArrN "Array: "
+str  Spc  " "
+
+var a,b,c,d,e,f,g,h,i
 
 
-const
-  int  MemSz  9
-  int  Zero   0
-  int  ArrSz  10
-  int  ArrLvl 1
-  int  a_0  7
-  int  a_1  5
-  int  a_2  93
-  int  a_3  17
-  int  a_4  23
-  int  a_5  8
-  int  a_6  13
-  int  a_7  42
-  int  a_8  3
-  int  a_9  65
-  str  ArrN "Array: "
-  str  Spc  " "
-end const
-
-
-code
-  EntryPoint:
-	pushc  MemSz
-	gpm
-	memsz
-	gc
-	
-	pushc  ArrSz
-	gpm
-	pushc  ArrLvl
-	gpm
-	newarr
-	gc
-	peek   0
-	pop
-	
-	pushc  Zero
-	peek   1
-	pop
-	
-	pushc  a_0
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_1
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_2
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_3
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_4
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_5
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_6
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_7
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_8
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	pushc  a_9
-	push   1
-	push   0
-	arritmpeek
-	push   1
-	inc
-	pop
-	
-	push   0
-	pushc  PrintArray
-	gpm
-	jc
-	gc
-	
-	push   0
-	pushc  SortArray
-	gpm
-	jc
-	gc
-	
-	push   0
-	pushc  PrintArray
-	gpm
-	jc
-	gc
-	
-	pushc  EndPoint
-	gpm
-	jp
-	
-	
-
-  PrintArray:              
-    peek   2
-	arrlen
-	peek   3
+PrintArray:              
+    peek   $c
+	alen
+	peek   $d
 	pop
 	pushc  Zero
-	peek   4
+	peek   $e
 	pop
 	pushc  PrintArray_Loop
-	peek   5
+	peek   $f
 	pop
 	pushc  Print
-	peek   6
+	peek   $g
 	pop
 	pushc  ArrN
 	gpm
-	push   6
+	push   $g
 	invoke
 	gc
 	PrintArray_Loop:
-	  push    4
-	  push    2
-	  arritmpush
-	  push    6
+	  push    $e
+	  push    $c
+	  pushai
+	  push    $g
 	  invoke
 	  pushc   Spc
 	  gpm
-	  push    6
+	  push    $g
 	  invoke
 	  gc
-	  push    5
-	  push    4
+	  push    $f
+	  push    $e
 	  inc
-	  push    3
+	  push    $d
 	  bg
 	  gpm
 	  jn
-	push   3
+	push   $d
 	gpm
 	pop
-	push   4
+	push   $e
 	gpm
 	pop
-	push   5
+	push   $f
 	gpm
 	pop
-	push   6
+	push   $g
 	gpm
 	pop
 	pushc  PrintLn
 	gpm
 	invoke
 	gc
-  jr  
+jr  
 	  
 	  
 	  
-  SortArray:
-    peek   2
-	arrlen
-	peek   3
+SortArray:
+    peek   $c
+	alen
+	peek   $d
 	dec
 	pop
 	pushc  Zero
-	peek   4
+	peek   $e
 	pop
 	pushc  SortArray_Loop
-	peek   5
+	peek   $f
 	pop
 	pushc  SortArray_Loop2
-	peek   6
+	peek   $g
 	pop
 	pushc  Zero
-	peek   7
+	peek   $h
 	pop
 	pushc  Zero
-	peek   8
+	peek   $i
 	pop
 	SortArray_Loop:
-	  push    7
+	  push    $h
 	  gpm
 	  gc
 	  pushc   Zero
-	  peek    7
+	  peek    $h
 	  pop
-	  push    4
+	  push    $e
 	  gpm
 	  gc
 	  pushc   Zero
-	  peek    4
+	  peek    $e
 	  pop
 	  SortArray_Loop2:
 	    pushc   SortArray_IfSt1
 		gpm
-	    push    4
-	    push    2
-	    arritmpush
-        push    4
+	    push    $e
+	    push    $c
+	    pushai
+        push    $e
 		inc
-	    push    2
-	    arritmpush
-		push    4
+	    push    $c
+	    pushai
+		push    $e
 		dec
 		pop
 	    bg
@@ -253,68 +133,172 @@ code
 		gpm
 		jp
 		SortArray_IfSt1:
-		  push    7
+		  push    $h
 		  inc
 		  pop
-		  push    4
-	      push    2
-	      arritmpush
-          push    4
+		  push    $e
+	      push    $c
+	      pushai
+          push    $e
 		  inc
-	      push    2
-	      arritmpush
-		  push    4
+	      push    $c
+	      pushai
+		  push    $e
 		  dec
 		  pop
-		  push    4
-	      push    2
-	      arritmpeek
-          push    4
+		  push    $e
+	      push    $c
+	      peekai
+          push    $e
 		  inc
-	      push    2
-	      arritmpeek
-		  push    4
+	      push    $c
+	      peekai
+		  push    $e
 		  dec
 		  pop
 		SortArray_IfSt1_End:
 	    gc
-	    push    6
-	    push    4
+	    push    $g
+	    push    $e
 	    inc
-	    push    3
+	    push    $d
 	    bg
 		gpm
         jn
-	  push    5
-	  push    7
-	  push    8
+	  push    $f
+	  push    $h
+	  push    $i
 	  eq
 	  gpm
 	  jz
 	  
-	push   3
+	push   $d
 	gpm
 	pop
-	push   4
+	push   $e
 	gpm
 	pop
-	push   5
+	push   $f
 	gpm
 	pop
-	push   6
+	push   $g
 	gpm
 	pop
-	push   7
+	push   $h
 	gpm
 	pop
-	push   8
+	push   $i
 	gpm
 	pop
 	gc
-  jr
-  
-  
-	  
-  EndPoint:
-    gc
-end code
+jr
+
+
+
+Main:
+	pushc  MemSz
+	gpm
+	msz
+	gc
+	
+	pushc  ArrSz
+	gpm
+	pushc  ArrLvl
+	gpm
+	newa
+	gc
+	peek   $a
+	pop
+	
+	pushc  Zero
+	peek   $b
+	pop
+	
+	pushc  a_0
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_1
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_2
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_3
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_4
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_5
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_6
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_7
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_8
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	pushc  a_9
+	push   $b
+	push   $a
+	peekai
+	push   $b
+	inc
+	pop
+	
+	push   $a
+	pushc  PrintArray
+	gpm
+	jc
+	gc
+	
+	push   $a
+	pushc  SortArray
+	gpm
+	jc
+	gc
+	
+	push   $a
+	pushc  PrintArray
+	gpm
+	jc
+	gc
