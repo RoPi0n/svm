@@ -1,18 +1,7 @@
-import
-  from "crt.lib"
-   PrintLn "PRINTLN"
-  end from
-end import
+import PrintLn "crt.lib" "PRINTLN"
 
-
-const
+Main:
   str Hello "Hello world!"
-end const
-
-
-code
-  EntryPoint:
-	pushc Hello
-	pushc PrintLn
-	invoke
-end code
+  push !Hello
+  push !PrintLn
+  invoke
