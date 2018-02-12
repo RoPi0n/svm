@@ -1,51 +1,43 @@
-import
-  from "crt.lib"
-   PrintLn "PRINTLN"
-  end from
-end import
+import PrintLn "crt.lib" "PRINTLN"
 
 
-const
-  str Msg  "The exception 'division by zero' catched!"
-  str Msg2 "CSVM exception message:"
-  str Msg3 ":)"
-  int a 10
-  int b 0
-end const
+str Msg  "The exception 'division by zero' catched!"
+str Msg2 "SVM exception message:"
+str Msg3 ":)"
+int a 10
+int b 0
 
-
-code
-  EntryPoint:
-    pushc Finally
+  
+Main:
+    push !Finally
 	gpm
-	pushc Catch
+	push !Catch
 	gpm
 	tr
-	pushc b
+	push !b
 	gpm
-	pushc a
+	push !a
 	gpm
 	div
 	trs
   Catch:
-    pushc Msg
+    push !Msg
     gpm
-	pushc PrintLn
-    gpm
-	invoke
-	pushc Msg2
-    gpm
-	pushc PrintLn
+	push !PrintLn
     gpm
 	invoke
-	pushc PrintLn
+	push !Msg2
+    gpm
+	push !PrintLn
+    gpm
+	invoke
+	push !PrintLn
 	gpm
     invoke
   Finally:
-    pushc Msg3
+    push !Msg3
 	gpm
-    pushc PrintLn
+    push !PrintLn
     gpm
 	invoke
-	gc
-end code
+    gc
