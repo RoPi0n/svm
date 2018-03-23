@@ -2,14 +2,10 @@ import PrintLn "crt.lib" "PRINTLN"
 import InputLn "crt.lib" "INPUTLN"
 
 
-str Hello "Hello, what's your name?"
-str Hello_Guy "You good guy, "
-
-
 proc Main()
-  invoke !PrintLn(!Hello)
+  invoke !PrintLn("Hello, what's your name?")
   invoke !InputLn
-  push   !Hello_Guy
+  push   "You good guy, "
   add 
   invoke !PrintLn
   gc
