@@ -1,4 +1,11 @@
-library svm_core;
+//{$Define BuildInLibrary}
+
+{$IfDef BuildInLibrary}
+  library svm_core;
+{$Else}
+  program svm_core;
+  {$apptype gui}
+{$EndIf}
 
 uses
   {$IfDef UNIX}
@@ -12,17 +19,21 @@ uses
 {***** OP Codes ***************************************************************}
 type
   TComand = (
+    {** for stack **}
     bcPH,     // [top] = [var]
     bcPK,     // [var] = [top]
     bcPP,     // pop
     bcSDP,    // stkdrop
     bcSWP,    // [top] <-> [top-1]
+
+    {** jump's **}
     bcJP,     // jump [top]
     bcJZ,     // [top] == 0 ? jp [top-1]
     bcJN,     // [top] <> 0 ? jp [top-1]
     bcJC,     // jp [top] & push callback point as ip+1
     bcJR,     // jp to last callback point & rem last callback point
 
+    {** for untyped's **}
     bcEQ,     // [top] == [top-1] ? [top] = 1 : [top] = 0
     bcBG,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
     bcBE,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
@@ -47,13 +58,16 @@ type
     bcMV,     // [top]^ = [top-1]^
     bcMVBP,   // [top]^^ = [top-1]^
     bcMVP,    // [top]^ = [top-1]
-	
+
+    {** memory operation's **}
     bcMS,     // memory map size = [top]
     bcNW,     // [top] = @new
     bcMC,     // copy [top]
     bcMD,     // double [top]
     bcRM,     // rem @[top]
     bcNA,     // [top] = @new array[  [top]  ] of pointer
+
+    {** array's **}
     bcSF,     // sizeof( [top] as object )
     bcAL,     // length( [top] as array )
     bcSL,     // setlength( [top] as array, {stack} )
@@ -61,30 +75,109 @@ type
     bcPA,     // push ([top] as array)[top-1]
     bcSA,     // peek [top-2] -> ([top] as array)[top-1]
 
+    {** memory grabber **}
     bcGPM,    // add pointer to TMem to grabber task-list
     bcGPA,    // add pointer to TMemArr to grabber task-list
     bcGC,     // run grabber
 
+    {** constant's **}
     bcPHC,    // push const
 
+    {** external call's **}
     bcPHEXMP, // push pointer to external method
     bcINV,    // call external method
     bcINVBP,  // call external method by pointer [top]
 
+    {** for thread's **}
     bcPHN,    // push null
     bcCTHR,   // [top] = thread(method = [top], arg = [top+1]):id
     bcSTHR,   // suspendthread(id = [top])
     bcRTHR,   // resumethread(id = [top])
     bcTTHR,   // terminatethread(id = [top])
 
+    {** for try..catch..finally block's **}
     bcTR,     // try @block_catch = [top], @block_end = [top+1]
     bcTRS,    // success exit from try/catch block
     bcTRR,    // raise exception, message = [top]
 
-    bcPHS,    // [top]  -X-> [top2]
-    bcPKS,    // [top2] -X-> [top]
-    bcPPS,    // [top2] -X-> X
-    bcPHSP    // [top]  ---> [top2]
+    {** for word's **}
+    bcEQ_W,     // [top] == [top-1] ? [top] = 1 : [top] = 0
+    bcBG_W,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
+    bcBE_W,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
+
+    bcNOT_W,    // [top] = ![top]
+    bcAND_W,    // [top] = [top] and [top-1]
+    bcOR_W,     // [top] = [top] or  [top-1]
+    bcXOR_W,    // [top] = [top] xor [top-1]
+    bcSHR_W,    // [top] = [top] shr [top-1]
+    bcSHL_W,    // [top] = [top] shl [top-1]
+
+    bcINC_W,    // [top]++
+    bcDEC_W,    // [top]--
+    bcADD_W,    // [top] = [top] + [top-1]
+    bcSUB_W,    // [top] = [top] - [top-1]
+    bcMUL_W,    // [top] = [top] * [top-1]
+    bcDIV_W,    // [top] = [top] / [top-1]
+    bcMOD_W,    // [top] = [top] % [top-1]
+    bcIDIV_W,   // [top] = [top] \ [top-1]
+
+    bcMV_W,     // [top]^ = [top-1]^
+    bcMVBP_W,   // [top]^^ = [top-1]^
+
+    {** for integer's **}
+    bcEQ_I,     // [top] == [top-1] ? [top] = 1 : [top] = 0
+    bcBG_I,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
+    bcBE_I,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
+
+    bcNOT_I,    // [top] = ![top]
+    bcAND_I,    // [top] = [top] and [top-1]
+    bcOR_I,     // [top] = [top] or  [top-1]
+    bcXOR_I,    // [top] = [top] xor [top-1]
+    bcSHR_I,    // [top] = [top] shr [top-1]
+    bcSHL_I,    // [top] = [top] shl [top-1]
+
+    bcNEG_I,    // [top] = -[top]
+    bcINC_I,    // [top]++
+    bcDEC_I,    // [top]--
+    bcADD_I,    // [top] = [top] + [top-1]
+    bcSUB_I,    // [top] = [top] - [top-1]
+    bcMUL_I,    // [top] = [top] * [top-1]
+    bcDIV_I,    // [top] = [top] / [top-1]
+    bcMOD_I,    // [top] = [top] % [top-1]
+    bcIDIV_I,   // [top] = [top] \ [top-1]
+
+    bcMV_I,     // [top]^ = [top-1]^
+    bcMVBP_I,   // [top]^^ = [top-1]^
+
+    {** for digit's with floating point **}
+    bcEQ_D,     // [top] == [top-1] ? [top] = 1 : [top] = 0
+    bcBG_D,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
+    bcBE_D,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
+
+    bcNEG_D,    // [top] = -[top]
+    bcINC_D,    // [top]++
+    bcDEC_D,    // [top]--
+    bcADD_D,    // [top] = [top] + [top-1]
+    bcSUB_D,    // [top] = [top] - [top-1]
+    bcMUL_D,    // [top] = [top] * [top-1]
+    bcDIV_D,    // [top] = [top] / [top-1]
+    bcMOD_D,    // [top] = [top] % [top-1]
+    bcIDIV_D,   // [top] = [top] \ [top-1]
+
+    bcMV_D,     // [top]^ = [top-1]^
+    bcMVBP_D,   // [top]^^ = [top-1]^
+
+    {** for string's **}
+    bcEQ_S,
+    bcADD_S,
+    bcMV_S,
+    bcMVBP_S,
+    bcSTRL,     // strlen
+    bcSTRD,     // strdel
+    bcSTCHATP,  // push str[x]
+    bcSTCHATK,  // peek str[x]
+    bcCHORD,
+    bcORDCH
     );
 
 {***** Global consts **********************************************************}
@@ -184,12 +277,19 @@ type
 
         ctInt64:
         begin
-          self.SetConst(
-            cardinal(length(self.constants)) - consts_count,
-            int64((pb^[bpos + 1] shl 24) + (pb^[bpos + 2] shl 16) +
-            (pb^[bpos + 3] shl 8) + pb^[bpos + 4])
-            );
-          Inc(bpos, 5);
+          if pb^[bpos + 1] = 0 then
+           self.SetConst(
+             cardinal(length(self.constants)) - consts_count,
+             int64((pb^[bpos + 2] shl 24) + (pb^[bpos + 3] shl 16) +
+             (pb^[bpos + 4] shl 8) + pb^[bpos + 5])
+           )
+          else
+           self.SetConst(
+             cardinal(length(self.constants)) - consts_count,
+             -int64((pb^[bpos + 2] shl 24) + (pb^[bpos + 3] shl 16) +
+             (pb^[bpos + 4] shl 8) + pb^[bpos + 5])
+           );
+          Inc(bpos, 6);
         end;
 
         ctDouble:
@@ -437,8 +537,6 @@ type
   end;
 
   procedure TStack.drop;
-  var
-    p: pointer;
   begin
     SetLength(self.items,0);
   end;
@@ -473,7 +571,7 @@ type
   begin
     SetLength(size_arr, lvl);
     for i := 0 to lvl - 1 do
-      size_arr[i] := PMem(stk^.popv)^;
+      size_arr[i] := Cardinal(PMem(stk^.popv)^);
     Result := NewArr_Sub(@size_arr, lvl);
   end;
 
@@ -600,7 +698,7 @@ type
   public
     mainclasspath: string;
     mem: TMemory;
-    stack, stack2: TStack;
+    stack: TStack;
     cbstack: TCallBackStack;
     bytes: PByteArr;
     ip,end_ip: TInstructionPointer;
@@ -649,9 +747,12 @@ type
   procedure TSVM.RunThread;
   var
     p: pointer;
+    s: string;
   begin
     repeat
+      {$IfNDef BuildInLibrary}
       try
+      {$EndIf}
         while self.ip < self.end_ip do
           case TComand(self.bytes^[self.ip]) of
             bcPH:
@@ -693,21 +794,21 @@ type
 
             bcJP:
             begin
-              self.ip := PMem(self.stack.popv)^;
+              self.ip := Cardinal(PMem(self.stack.popv)^);
             end;
 
             bcJZ:
             begin
-              if PMem(self.stack.popv)^ = 0 then
-                self.ip := PMem(self.stack.popv)^
+              if Int64(PMem(self.stack.popv)^) = 0 then
+                self.ip := Cardinal(PMem(self.stack.popv)^)
               else
                 Inc(self.ip);
             end;
 
             bcJN:
             begin
-              if PMem(self.stack.popv)^ <> 0 then
-                self.ip := PMem(self.stack.popv)^
+              if Int64(PMem(self.stack.popv)^) <> 0 then
+                self.ip := Cardinal(PMem(self.stack.popv)^)
               else
                 Inc(self.ip);
             end;
@@ -715,7 +816,7 @@ type
             bcJC:
             begin
               self.cbstack.push(self.ip + 1);
-              self.ip := PMem(self.stack.popv)^;
+              self.ip := Cardinal(PMem(self.stack.popv)^);
             end;
 
             bcJR:
@@ -727,7 +828,7 @@ type
             begin
               p := self.stack.popv;
               if PMem(p)^ = PMem(self.stack.popv)^ then
-                self.stack.push(NewMemV(1))
+                self.stack.push(NewMemV(-1))
               else
                 self.stack.push(NewMemV(0));
               Inc(self.ip);
@@ -737,7 +838,7 @@ type
             begin
               p := self.stack.popv;
               if PMem(p)^ > PMem(self.stack.popv)^ then
-                self.stack.push(NewMemV(1))
+                self.stack.push(NewMemV(-1))
               else
                 self.stack.push(NewMemV(0));
               Inc(self.ip);
@@ -747,7 +848,7 @@ type
             begin
               p := self.stack.popv;
               if PMem(p)^ >= PMem(self.stack.popv)^ then
-                self.stack.push(NewMemV(1))
+                self.stack.push(NewMemV(-1))
               else
                 self.stack.push(NewMemV(0));
               Inc(self.ip);
@@ -885,7 +986,7 @@ type
 	    bcMVP:
 	    begin
               p := self.stack.popv;
-	      PMem(p)^ := Cardinal(PMem(self.stack.popv)^);
+	      PMem(p)^ := Cardinal(PMem(self.stack.popv));
 	      Inc(self.ip);
 	    end;
 
@@ -920,7 +1021,7 @@ type
 
             bcNA:
             begin
-              self.stack.push(NewArr(@self.stack, PMem(self.stack.popv)^));
+              self.stack.push(NewArr(@self.stack, Cardinal(PMem(self.stack.popv)^)));
               Inc(self.ip);
             end;
 
@@ -996,7 +1097,7 @@ type
 
             bcINV:
             begin
-              TExternalFunction(self.extern_methods^.GetFunc(PMem(self.stack.popv)^))(
+              TExternalFunction(self.extern_methods^.GetFunc(Cardinal(PMem(self.stack.popv)^)))(
                 @self.stack);
               Inc(self.ip);
             end;
@@ -1016,7 +1117,7 @@ type
             bcCTHR:
             begin
               self.stack.push(TSVMThread.Create(self.bytes, self.consts,
-                self.extern_methods, PMem(self.stack.popv)^,
+                self.extern_methods, Cardinal(PMem(self.stack.popv)^),
                 self.stack.popv));
               Inc(self.ip);
             end;
@@ -1043,7 +1144,7 @@ type
             bcTR:
             begin
               p := self.stack.popv;
-              try_blocks.add(PMem(p)^, PMem(self.stack.popv)^);
+              try_blocks.add(Cardinal(PMem(p)^), Cardinal(PMem(self.stack.popv)^));
               Inc(self.ip);
             end;
 
@@ -1057,34 +1158,520 @@ type
               self.ip := try_blocks.TR_Catch(Exception.Create(PMem(self.stack.popv)^));
             end;
 
-            bcPHS:
+            {** for word's **}
+
+            bcEQ_W:
             begin
-              stack2.push(stack.popv);
+              p := self.stack.popv;
+              if Cardinal(PMem(p)^) = Cardinal(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
               Inc(self.ip);
             end;
 
-            bcPKS:
+            bcBG_W:
             begin
-              stack.push(stack2.popv);
+              p := self.stack.popv;
+              if Cardinal(PMem(p)^) > Cardinal(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
               Inc(self.ip);
             end;
 
-            bcPPS:
+            bcBE_W:
             begin
-              stack2.pop;
+              p := self.stack.popv;
+              if Cardinal(PMem(p)^) >= Cardinal(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
               Inc(self.ip);
             end;
 
-            bcPHSP:
+            bcNOT_W:
             begin
-              stack2.push(stack.peek);
+              PMem(self.stack.peek)^ := not Cardinal(PMem(self.stack.peek)^);
               Inc(self.ip);
+            end;
+
+            bcAND_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) and Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcOR_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) or Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcXOR_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) xor Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcSHR_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) shr Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcSHL_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) shl Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcINC_W:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := Cardinal(PMem(p)^) + 1;
+              Inc(self.ip);
+            end;
+
+            bcDEC_W:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := Cardinal(PMem(p)^) - 1;
+              Inc(self.ip);
+            end;
+
+            bcADD_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) + Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcSUB_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) - Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcMUL_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) * Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcDIV_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) / Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcMOD_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) mod Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcIDIV_W:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Cardinal(PMem(p)^) div Cardinal(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+	    bcMV_W:
+	    begin
+              p := self.stack.popv;
+	      PMem(p)^ := Cardinal(PMem(self.stack.popv)^);
+	      Inc(self.ip);
+	    end;
+
+	    bcMVBP_W:
+	    begin
+              p := self.stack.popv;
+	      PMem(Pointer(Cardinal(PMem(p)^)))^ := Cardinal(PMem(self.stack.popv)^);
+	      Inc(self.ip);
+	    end;
+
+            {** for integer's **}
+
+            bcEQ_I:
+            begin
+              p := self.stack.popv;
+              if Int64(PMem(p)^) = Int64(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
+              Inc(self.ip);
+            end;
+
+            bcBG_I:
+            begin
+              p := self.stack.popv;
+              if Int64(PMem(p)^) > Int64(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
+              Inc(self.ip);
+            end;
+
+            bcBE_I:
+            begin
+              p := self.stack.popv;
+              if Int64(PMem(p)^) >= Int64(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
+              Inc(self.ip);
+            end;
+
+            bcNOT_I:
+            begin
+              PMem(self.stack.peek)^ := not Int64(PMem(self.stack.peek)^);
+              Inc(self.ip);
+            end;
+
+            bcAND_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) and Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcOR_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) or Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcXOR_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) xor Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcSHR_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) shr Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcSHL_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) shl Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcNEG_I:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := -Int64(PMem(p)^);
+              Inc(self.ip);
+            end;
+
+            bcINC_I:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := Int64(PMem(p)^) + 1;
+              Inc(self.ip);
+            end;
+
+            bcDEC_I:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := Int64(PMem(p)^) - 1;
+              Inc(self.ip);
+            end;
+
+            bcADD_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) + Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcSUB_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) - Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcMUL_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) * Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcDIV_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) / Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcMOD_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) mod Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcIDIV_I:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Int64(PMem(p)^) div Int64(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+	    bcMV_I:
+	    begin
+              p := self.stack.popv;
+	      PMem(p)^ := Int64(PMem(self.stack.popv)^);
+	      Inc(self.ip);
+	    end;
+
+	    bcMVBP_I:
+	    begin
+              p := self.stack.popv;
+	      PMem(Pointer(Cardinal(PMem(p)^)))^ := Int64(PMem(self.stack.popv)^);
+	      Inc(self.ip);
+	    end;
+
+            {** for float's **}
+
+            bcEQ_D:
+            begin
+              p := self.stack.popv;
+              if Double(PMem(p)^) = Double(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
+              Inc(self.ip);
+            end;
+
+            bcBG_D:
+            begin
+              p := self.stack.popv;
+              if Double(PMem(p)^) > Double(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
+              Inc(self.ip);
+            end;
+
+            bcBE_D:
+            begin
+              p := self.stack.popv;
+              if Double(PMem(p)^) >= Double(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
+              Inc(self.ip);
+            end;
+
+            bcNEG_D:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := -Double(PMem(p)^);
+              Inc(self.ip);
+            end;
+
+            bcINC_D:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := Double(PMem(p)^) + 1;
+              Inc(self.ip);
+            end;
+
+            bcDEC_D:
+            begin
+              p := self.stack.peek;
+              PMem(p)^ := Double(PMem(p)^) - 1;
+              Inc(self.ip);
+            end;
+
+            bcADD_D:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Double(PMem(p)^) + Double(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcSUB_D:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Double(PMem(p)^) - Double(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcMUL_D:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Double(PMem(p)^) * Double(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcDIV_D:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Double(PMem(p)^) / Double(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcMOD_D:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Frac(Double(PMem(p)^) / Double(PMem(self.stack.popv)^));
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcIDIV_D:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := Trunc(Double(PMem(p)^) / Double(PMem(self.stack.popv)^));
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+	    bcMV_D:
+	    begin
+              p := self.stack.popv;
+	      PMem(p)^ := Double(PMem(self.stack.popv)^);
+	      Inc(self.ip);
+	    end;
+
+	    bcMVBP_D:
+	    begin
+              p := self.stack.popv;
+	      PMem(Pointer(Cardinal(PMem(p)^)))^ := Double(PMem(self.stack.popv)^);
+	      Inc(self.ip);
+	    end;
+
+            {** for string's **}
+
+            bcEQ_S:
+            begin
+              p := self.stack.popv;
+              if String(PMem(p)^) = String(PMem(self.stack.popv)^) then
+                self.stack.push(NewMemV(-1))
+              else
+                self.stack.push(NewMemV(0));
+              Inc(self.ip);
+            end;
+
+            bcADD_S:
+            begin
+              p := self.stack.popv;
+              PMem(p)^ := String(PMem(p)^) + String(PMem(self.stack.popv)^);
+              self.stack.push(p);
+              Inc(self.ip);
+            end;
+
+            bcMV_S:
+	    begin
+              p := self.stack.popv;
+	      PMem(p)^ := String(PMem(self.stack.popv)^);
+	      Inc(self.ip);
+	    end;
+
+	    bcMVBP_S:
+	    begin
+              p := self.stack.popv;
+	      PMem(Pointer(Cardinal(PMem(p)^)))^ := String(PMem(self.stack.popv)^);
+	      Inc(self.ip);
+	    end;
+
+            bcSTRL:
+            begin// strlen;
+              self.stack.push(NewMemV(Length(String(PMem(self.stack.popv)^))));
+	      Inc(self.ip);
+            end;
+
+            bcSTRD:
+            begin// strdel;
+              p := self.stack.popv;
+              S := String(PMem(p)^);
+              Delete(s,Cardinal(PMem(self.stack.popv)^),Cardinal(PMem(self.stack.popv)^));
+              PMem(p)^ := s;
+              S := '';
+              Inc(self.ip);
+            end;
+
+            bcSTCHATP:// push str[x]
+            begin
+              p := self.stack.popv;
+              self.stack.push(NewMemV(String(PMem(p)^)[Cardinal(PMem(self.stack.popv)^)]));
+	      Inc(self.ip);
+            end;
+
+            bcSTCHATK:  // peek str[x]
+            begin
+              p := self.stack.popv;
+              S := String(PMem(p)^);
+              S[Cardinal(PMem(self.stack.popv)^)] := Char(PMem(self.stack.popv)^);
+              PMem(p)^ := S;
+              S := '';
+              Inc(self.ip);
+            end;
+
+            bcCHORD:
+            begin
+              PMem(self.stack.peek)^ := Ord(Char(PMem(self.stack.peek)^));
+	      Inc(self.ip);
+            end;
+
+            bcORDCH:
+            begin
+              PMem(self.stack.peek)^ := Chr(Byte(PMem(self.stack.peek)^));
+	      Inc(self.ip);
             end;
 
             else
               VMError('Error: not supported operation, byte 0x' + IntToHex(self.bytes^[self.ip], 2) +
                 ', at #' + IntToStr(self.ip));
           end;
+      {$IfNDef BuildInLibrary}
       except
         on E: Exception do
         begin
@@ -1097,6 +1684,7 @@ type
           end;
         end;
       end;
+      {$EndIf}
     until self.ip >= self.end_ip;
     self.grabber.run;
   end;
@@ -1137,7 +1725,7 @@ type
   end;
 
 {***** Main *******************************************************************}
-
+{$IfDef BuildInLibrary}
 function SVM_Create:PSVM; stdcall;
 begin
   New(Result);
@@ -1168,10 +1756,59 @@ begin
   SVM^.Run;
 end;
 
-exports SVM_Create name '_SVM_CREATE';
-exports SVM_Free   name '_SVM_FREE';
-exports SVM_Run    name '_SVM_RUN';
-exports SVM_RegAPI name '_SVM_REGAPI';
+procedure SVM_CheckErr(SVM:PSVM; E:Exception); stdcall;
+begin
+  SVM^.try_blocks.TR_Catch(E);
+end;
+
+procedure SVM_Continue(SVM:PSVM); stdcall;
+begin
+  SVM^.RunThread;
+end;
+
+exports SVM_Create   name '_SVM_CREATE';
+exports SVM_Free     name '_SVM_FREE';
+exports SVM_Run      name '_SVM_RUN';
+exports SVM_RegAPI   name '_SVM_REGAPI';
+exports SVM_CheckErr name '_SVM_CHECKERR';
+exports SVM_Continue name '_SVM_CONTINUE';
 
 begin
 end.
+
+{$Else}
+
+procedure CheckHeader(pb:PByteArr);
+begin
+  if Length(pb^) >= 10 then
+   begin
+     if (chr(pb^[0]) = 'S') and (chr(pb^[1]) = 'V') and (chr(pb^[2]) = 'M') and
+        (chr(pb^[3]) = 'E') and (chr(pb^[4]) = 'X') and (chr(pb^[5]) = 'E') and
+        (chr(pb^[6]) = '_') and (chr(pb^[7]) = 'C') and (chr(pb^[8]) = 'N') and
+        (chr(pb^[9]) = 'S') then Exit;
+     if (chr(pb^[0]) = 'S') and (chr(pb^[1]) = 'V') and (chr(pb^[2]) = 'M') and
+        (chr(pb^[3]) = 'E') and (chr(pb^[4]) = 'X') and (chr(pb^[5]) = 'E') and
+        (chr(pb^[6]) = '_') and (chr(pb^[7]) = 'G') and (chr(pb^[8]) = 'U') and
+        (chr(pb^[9]) = 'I') then Exit;
+   end;
+  raise Exception.Create('Error: Invalid SVMEXE-file header!');
+  halt;
+end;
+
+var
+  svm:TSVM;
+begin
+  if ParamCount<1 then
+   begin
+     writeln('Stack-based virtual machine.');
+     writeln('Using: ',ExtractFileName(ParamStr(0)),' <svmexe file>');
+   end;
+  new(svm.bytes);
+  new(svm.consts);
+  new(svm.extern_methods);
+  svm.LoadByteCodeFromFile(ParamStr(1));
+  CheckHeader(svm.bytes);
+  CutLeftBytes(svm.bytes,10);
+  svm.Run;
+end.
+{$EndIf}
