@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="10"/>
+    <BuildModes Active="Default"/>
+    <Units Count="2">
+      <Unit0>
+        <Filename Value="sysunit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="SysUNIT"/>
+        <CursorPos Y="69"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="..\adp.inc"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="41"/>
+        <CursorPos X="22" Y="53"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit1>
+    </Units>
+    <JumpHistory Count="2" HistoryIndex="1">
+      <Position1>
+        <Filename Value="sysunit.pas"/>
+        <Caret Line="17" Column="2" TopLine="4"/>
+      </Position1>
+      <Position2>
+        <Filename Value="sysunit.pas"/>
+        <Caret Line="38" Column="30" TopLine="24"/>
+      </Position2>
+    </JumpHistory>
+  </ProjectSession>
+</CONFIG>

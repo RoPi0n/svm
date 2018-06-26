@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Compiler Value="C:\lazarus\fpc\2.6.4\bin\i386-win32\fpc.exe" Date="1189850957"/>
+  <Params Value=" -MObjFPC -Scghi -WR -O1 -g -gl -Xg -Xs -l -vewnhibq -FiC:\Users\Павел\Desktop\_BEAR\src\adp\srclibs\graph\lib\i386-win32 -FuC:\Users\Павел\Desktop\_BEAR\src\adp\srclibs\graph\ -FUC:\Users\Павел\Desktop\_BEAR\src\adp\srclibs\graph\lib\i386-win32\ DGraph.pas"/>
+</CONFIG>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Compiler Value="C:\lazarus\fpc\3.0.2\bin\i386-win32\fpc.exe" Date="1247517510"/>
+  <Params Value=" -MObjFPC -Scghi -WR -O1 -g -gl -Xg -Xs -l -vewnhibq -FiC:\Users\Админ\Desktop\d6vm\src\srclib\math\lib\i386-win32 -FuC:\Users\Админ\Desktop\d6vm\src\srclib\math\ -FUC:\Users\Админ\Desktop\d6vm\src\srclib\math\lib\i386-win32\ dmath.pas"/>
+</CONFIG>

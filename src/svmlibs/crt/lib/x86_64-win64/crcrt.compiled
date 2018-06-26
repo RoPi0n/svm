@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Compiler Value="C:\lazarus\fpc\3.0.0\bin\x86_64-win64\fpc.exe" Date="1231859847"/>
+  <Params Value=" -MObjFPC -Scghi -WR -O1 -g -gl -Xg -Xs -l -vewnhibq -FiC:\Users\Павел\Desktop\_ASMLLI\src\adp\srclibs\crt\lib\x86_64-win64 -FuC:\Users\Павел\Desktop\_ASMLLI\src\adp\srclibs\crt\ -FUC:\Users\Павел\Desktop\_ASMLLI\src\adp\srclibs\crt\lib\x86_64-win64\ crcrt.lpr"/>
+</CONFIG>

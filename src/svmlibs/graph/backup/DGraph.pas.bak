@@ -1,0 +1,471 @@
+library DGraph;
+
+uses SysUtils,Graph;
+
+{$I DTypes.inc}
+
+{FUNCTIONS}
+procedure _ARC(Eng:PDASMEngine); stdcall;
+begin
+Arc(Eng^.popst,
+    Eng^.popst,
+    Eng^.popst,
+    Eng^.popst,
+    Eng^.popst);
+end;
+
+procedure _BAR(Eng:PDASMEngine); stdcall;
+begin
+Bar(Eng^.popst,
+    Eng^.popst,
+    Eng^.popst,
+    Eng^.popst);
+end;
+
+procedure _BAR3d(Eng:PDASMEngine); stdcall;
+begin
+Bar3d(Eng^.popst,
+      Eng^.popst,
+      Eng^.popst,
+      Eng^.popst,
+	  Eng^.popst,
+	  Eng^.popst);
+end;
+
+procedure _ClearDevice(Eng:PDASMEngine); stdcall;
+begin
+ ClearDevice;
+end;
+
+procedure _CloseGraph(Eng:PDASMEngine); stdcall;
+begin
+ CloseGraph;
+end;
+
+procedure _DetectGraph(Eng:PDASMEngine); stdcall;
+var a,b:smallint;
+begin
+ DetectGraph(a,b);
+ Eng^.pushst(b);
+ Eng^.pushst(a);
+end;
+
+procedure _DrawPoly(Eng:PDASMEngine); stdcall;
+var a,b:integer;
+begin
+ a:=Eng^.popst;
+ b:=Eng^.popst;
+ DrawPoly(a,b);
+end;
+
+procedure _Ellipse(Eng:PDASMEngine); stdcall;
+begin
+ Ellipse(Eng^.popst,
+      Eng^.popst,
+      Eng^.popst,
+      Eng^.popst,
+	  Eng^.popst,
+	  Eng^.popst);
+end;
+
+procedure _FillEllipse(Eng:PDASMEngine); stdcall;
+begin
+ FillEllipse(Eng^.popst,
+      Eng^.popst,
+      Eng^.popst,
+      Eng^.popst);
+end;
+
+procedure _FillPoly(Eng:PDASMEngine); stdcall;
+var a,b:integer;
+begin
+ a:=Eng^.popst;
+ b:=Eng^.popst;
+ FillPoly(a,b);
+end;
+
+procedure _FloodFill(Eng:PDASMEngine); stdcall;
+begin
+ FloodFill(Eng^.popst,
+           Eng^.popst,
+           Eng^.popst);
+end;
+
+procedure _GetArcCoords(Eng:PDASMEngine); stdcall;
+var actpe:ArcCoordsType;
+begin
+ GetArcCoords(actpe);
+ Eng^.pushst(actpe.yend);
+ Eng^.pushst(actpe.xend);
+ Eng^.pushst(actpe.ystart);
+ Eng^.pushst(actpe.xstart);
+ Eng^.pushst(actpe.y);
+ Eng^.pushst(actpe.x);
+end;
+
+procedure _GetAspectRatio(Eng:PDASMEngine); stdcall;
+var a,b:word;
+begin
+ GetAspectRatio(a,b);
+ Eng^.pushst(b);
+ Eng^.pushst(a);
+end;
+
+procedure _GetColor(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetColor);
+end;
+
+procedure _GetDirectVideo(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetDirectVideo);
+end;
+
+procedure _GetDriverName(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst('"'+GetDriverName+'"');
+end;
+
+procedure _GetFillPattern(Eng:PDASMEngine); stdcall;
+var tpe:FillPatternType;
+begin
+ GetFillPattern(tpe);
+ Eng^.pushst(tpe[8]);
+ Eng^.pushst(tpe[7]);
+ Eng^.pushst(tpe[6]);
+ Eng^.pushst(tpe[5]);
+ Eng^.pushst(tpe[4]);
+ Eng^.pushst(tpe[3]);
+ Eng^.pushst(tpe[2]);
+ Eng^.pushst(tpe[1]);
+end;
+
+procedure _GetFillSettings(Eng:PDASMEngine); stdcall;
+var tpe:FillSettingsType;
+begin
+ GetFillSettings(tpe);
+ Eng^.pushst(tpe.color);
+ Eng^.pushst(tpe.pattern);
+end;
+
+procedure _GetGraphMode(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetGraphMode);
+end;
+
+procedure _GetLineSettings(Eng:PDASMEngine); stdcall;
+var tpe:LineSettingsType;
+begin
+ GetLineSettings(tpe);
+ Eng^.pushst(tpe.thickness);
+ Eng^.pushst(tpe.pattern);
+ Eng^.pushst(tpe.linestyle);
+end;
+
+procedure _GetMaxColor(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetMaxColor);
+end;
+
+procedure _GetMaxMode(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetMaxMode);
+end;
+
+procedure _GetMaxX(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetMaxX);
+end;
+
+procedure _GetMaxY(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetMaxY);
+end;
+
+procedure _GetModeName(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetModeName(Eng^.popst));
+end;
+
+procedure _GetModeRange(Eng:PDASMEngine); stdcall;
+var a,b:smallint;
+begin
+ GetModeRange(Eng^.popst,a,b);
+ Eng^.pushst(b);
+ Eng^.pushst(a);
+end;
+
+procedure _GetPaletteSize(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetPaletteSize);
+end;
+
+procedure _GetTextSettings(Eng:PDASMEngine); stdcall;
+var tpe:TextSettingsType;
+begin
+ GetTextSettings(tpe);
+ Eng^.pushst(tpe.vert);
+ Eng^.pushst(tpe.horiz);
+ Eng^.pushst(tpe.charsize);
+ Eng^.pushst(tpe.direction);
+ Eng^.pushst(tpe.font);
+end;
+
+procedure _GetViewSettings(Eng:PDASMEngine); stdcall;
+var tpe:ViewPortType;
+begin
+ GetViewSettings(tpe);
+ Eng^.pushst(tpe.Clip);
+ Eng^.pushst(tpe.y2);
+ Eng^.pushst(tpe.x2);
+ Eng^.pushst(tpe.y1);
+ Eng^.pushst(tpe.x1);
+end;
+
+procedure _GetX(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetX);
+end;
+
+procedure _GetY(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GetY);
+end;
+
+procedure _GraphDefaults(Eng:PDASMEngine); stdcall;
+begin
+ GraphDefaults;
+end;
+
+procedure _GraphErrorMsg(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst('"'+GraphErrorMsg(Eng^.popst)+'"');
+end;
+
+procedure _GraphResult(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(GraphResult);
+end;
+
+procedure _InitGraph(Eng:PDASMEngine); stdcall;
+var a,b:smallint;
+begin
+ a:=Eng^.popst;
+ b:=Eng^.popst;
+ InitGraph(a,b,ExtractStr(Eng^.popst));
+end;
+
+procedure _InstallUserDriver(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(InstallUserDriver(ExtractStr(Eng^.popst),nil));
+end;
+
+procedure _InstallUserFont(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(InstallUserFont(ExtractStr(Eng^.popst)));
+end;
+
+procedure _LineRel(Eng:PDASMEngine); stdcall;
+begin
+ LineRel(Eng^.popst,Eng^.popst);
+end;
+
+procedure _LineTo(Eng:PDASMEngine); stdcall;
+begin
+ LineTo(Eng^.popst,Eng^.popst);
+end;
+
+procedure _MoveRel(Eng:PDASMEngine); stdcall;
+begin
+ MoveRel(Eng^.popst,Eng^.popst);
+end;
+
+procedure _MoveTo(Eng:PDASMEngine); stdcall;
+begin
+ MoveTo(Eng^.popst,Eng^.popst);
+end;
+
+procedure _OutText(Eng:PDASMEngine); stdcall;
+begin
+ OutText(ExtractStr(Eng^.popst));
+end;
+
+procedure _PieSlice(Eng:PDASMEngine); stdcall;
+begin
+ PieSlice(Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst);
+end;
+
+procedure _Rectangle(Eng:PDASMEngine); stdcall;
+begin
+ Rectangle(Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst);
+end;
+
+procedure _RestoreCrtMode(Eng:PDASMEngine); stdcall;
+begin
+ RestoreCrtMode;
+end;
+
+procedure _Sector(Eng:PDASMEngine); stdcall;
+begin
+ Sector(Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetAspectRatio(Eng:PDASMEngine); stdcall;
+begin
+ SetAspectRatio(Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetColor(Eng:PDASMEngine); stdcall;
+begin
+ SetColor(Eng^.popst);
+end;
+
+procedure _SetDirectVideo(Eng:PDASMEngine); stdcall;
+begin
+ SetDirectVideo(Eng^.popst);
+end;
+
+procedure _SetFillPattern(Eng:PDASMEngine); stdcall;
+var arr:FillPatternType;
+begin
+ arr[1]:=Eng^.popst;
+ arr[2]:=Eng^.popst;
+ arr[3]:=Eng^.popst;
+ arr[4]:=Eng^.popst;
+ arr[5]:=Eng^.popst;
+ arr[6]:=Eng^.popst;
+ arr[7]:=Eng^.popst;
+ arr[8]:=Eng^.popst;
+ SetFillPattern(
+ arr,
+ Eng^.popst);
+end;
+
+procedure _SetFillStyle(Eng:PDASMEngine); stdcall;
+begin
+ SetFillStyle(Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetGraphMode(Eng:PDASMEngine); stdcall;
+begin
+ SetGraphMode(Eng^.popst);
+end;
+
+procedure _SetLineStyle(Eng:PDASMEngine); stdcall;
+begin
+ SetLineStyle(Eng^.popst,Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetPalette(Eng:PDASMEngine); stdcall;
+begin
+ SetPalette(Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetTextJustify(Eng:PDASMEngine); stdcall;
+begin
+ SetTextJustify(Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetTextStyle(Eng:PDASMEngine); stdcall;
+begin
+ SetTextStyle(Eng^.popst,Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetUserCharSize(Eng:PDASMEngine); stdcall;
+begin
+ SetUserCharSize(Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetViewPort(Eng:PDASMEngine); stdcall;
+begin
+ SetViewPort(Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst,Eng^.popst);
+end;
+
+procedure _SetWriteMode(Eng:PDASMEngine); stdcall;
+begin
+ SetWriteMode(Eng^.popst);
+end;
+
+procedure _TextHeight(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(TextHeight(ExtractStr(Eng^.popst)));
+end;
+
+procedure _TextWidth(Eng:PDASMEngine); stdcall;
+begin
+ Eng^.pushst(TextHeight(ExtractStr(Eng^.popst)));
+end;
+{EXPORTS DB}
+exports _Arc  name 'ARC';
+exports _Bar  name 'BAR';
+exports _Bar3D  name 'BAR3D';
+exports _ClearDevice  name 'CLEARDEVICE';
+exports _Closegraph  name 'CLOSEGRAPH';
+exports _DetectGraph  name 'DETECTGRAPH';
+exports _DrawPoly  name 'DRAWPOLY';
+exports _Ellipse  name 'ELLIPSE';
+exports _FillEllipse  name 'FILLELLIPSE';
+exports _FillPoly  name 'FILLPOLY';
+exports _FloodFill  name 'FLOODFILL';
+exports _GetArcCoords  name 'GETARCCOORDS';
+exports _GetAspectRatio  name 'GETASPECTRATIO';
+exports _GetColor  name 'GETCOLOR';
+exports _GetDirectVideo  name 'GETDIRECTVIDEO';
+exports _GetDriverName  name 'GETDRIVERNAME';
+exports _GetFillPattern  name 'GETFILLPATTERN';
+exports _GetFillSettings  name 'GETFILLSETTINGS';
+exports _GetGraphMode  name 'GETGRAPHMODE';
+exports _GetLineSettings  name 'GETLINESETTINGS';
+exports _GetMaxColor  name 'GETMAXCOLOR';
+exports _GetMaxMode  name 'GETMAXMODE';
+exports _GetMaxX  name 'GETMAXX';
+exports _GetMaxY  name 'GETMAXY';
+exports _GetModeName  name 'GETMODENAME';
+exports _GetModeRange  name 'GETMODERANGE';
+exports _GetPaletteSize  name 'GETPALETTESIZE';
+exports _GetTextSettings  name 'GETTEXTSETTINGS';
+exports _GetViewSettings  name 'GETVIEWSETTINGS';
+exports _GetX  name 'GETX';
+exports _GetY  name 'GETY';
+exports _GraphDefaults  name 'GRAPHDEFAULTS';
+exports _GraphErrorMsg  name 'GRAPHERRORMSG';
+exports _GraphResult  name 'GRAPHRESULT';
+exports _InitGraph  name 'INITGRAPH';
+exports _InstallUserDriver  name 'INSTALLUSERDRIVER';
+exports _InstallUserFont  name 'INSTALLUSERFONT';
+exports _LineRel  name 'LINEREL';
+exports _LineTo  name 'LINETO';
+exports _MoveRel  name 'MOVEREL';
+exports _MoveTo  name 'MOVETO';
+exports _OutText  name 'OUTTEXT';
+exports _PieSlice  name 'PIESLICE';
+exports _Rectangle  name 'RECTANGLE';
+exports _RestoreCrtMode  name 'RESTORECRTMODE';
+exports _Sector  name 'SECTOR';
+exports _SetAspectRatio  name 'SETASPECTRATIO';
+exports _SetColor  name 'SETCOLOR';
+exports _SetDirectVideo  name 'SETDIRECTVIDEO';
+exports _SetFillPattern  name 'SETFILLPATTERN';
+exports _SetFillStyle  name 'SETFILLSTYLE';
+exports _SetGraphMode  name 'SETGRAPHMODE';
+exports _SetLineStyle  name 'SETLINESTYLE';
+exports _SetPalette  name 'SETPALETTE';
+exports _SetTextJustify  name 'SETTEXTJUSTIFY';
+exports _SetTextStyle  name 'SETTEXTSTYLE';
+exports _SetUserCharSize  name 'SETUSERCHARSIZE';
+exports _SetViewPort  name 'SETVIEWPORT';
+exports _SetWriteMode  name 'SETWRITEMODE';
+exports _TextHeight  name 'TEXTHEIGHT';
+exports _TextWidth  name 'TEXTWIDTH';
+
+
+{
+  -getDefaultPalete
+  -getPalete
+  -queryadapterinfo
+  -RegisterBGIDriver
+  -RegisterBGIFont
+}
+
+begin
+end.
