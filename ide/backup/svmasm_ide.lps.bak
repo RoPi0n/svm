@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="10"/>
+    <BuildModes Active="Default"/>
+    <Units Count="10">
+      <Unit0>
+        <Filename Value="svmasm_ide.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="1"/>
+        <CursorPos X="5" Y="5"/>
+        <UsageCount Value="47"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="mainform.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="MainFrm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="MainForm"/>
+        <TopLine Value="126"/>
+        <CursorPos X="41" Y="175"/>
+        <UsageCount Value="47"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="editor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="EditorFrame"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+        <UnitName Value="Editor"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="4"/>
+        <TopLine Value="340"/>
+        <CursorPos X="3" Y="343"/>
+        <UsageCount Value="47"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="global.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="3"/>
+        <CursorPos X="27" Y="8"/>
+        <UsageCount Value="47"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="aboutform.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="AboutFrm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="2"/>
+        <CursorPos X="3" Y="9"/>
+        <UsageCount Value="38"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="debugger.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="DebuggerFrm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="Debugger"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="43"/>
+        <CursorPos X="18" Y="43"/>
+        <UsageCount Value="37"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="C:\lazarus182\lcl\comctrls.pp"/>
+        <UnitName Value="ComCtrls"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="583"/>
+        <CursorPos X="3" Y="568"/>
+        <UsageCount Value="10"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="C:\lazarus182\lcl\controls.pp"/>
+        <UnitName Value="Controls"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1216"/>
+        <CursorPos X="15" Y="1225"/>
+        <UsageCount Value="19"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="C:\lazarus182\lcl\extctrls.pp"/>
+        <UnitName Value="ExtCtrls"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1098"/>
+        <CursorPos X="14" Y="1105"/>
+        <UsageCount Value="19"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="editor.lfm"/>
+        <EditorIndex Value="5"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit9>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="267" Column="26" TopLine="242"/>
+      </Position1>
+      <Position2>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="258" Column="20" TopLine="256"/>
+      </Position2>
+      <Position3>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="319" Column="3" TopLine="308"/>
+      </Position3>
+      <Position4>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="194" TopLine="190"/>
+      </Position4>
+      <Position5>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="77" Column="36" TopLine="68"/>
+      </Position5>
+      <Position6>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="320" Column="48" TopLine="314"/>
+      </Position6>
+      <Position7>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="150" Column="19" TopLine="142"/>
+      </Position7>
+      <Position8>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="328" Column="3" TopLine="324"/>
+      </Position8>
+      <Position9>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="360" Column="3" TopLine="358"/>
+      </Position9>
+      <Position10>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="331" TopLine="327"/>
+      </Position10>
+      <Position11>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="211" Column="27" TopLine="50"/>
+      </Position11>
+      <Position12>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="10" Column="20"/>
+      </Position12>
+      <Position13>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="325" Column="68" TopLine="313"/>
+      </Position13>
+      <Position14>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="327" Column="36" TopLine="317"/>
+      </Position14>
+      <Position15>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="340" Column="16" TopLine="335"/>
+      </Position15>
+      <Position16>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="10" Column="19"/>
+      </Position16>
+      <Position17>
+        <Filename Value="svmasm_ide.lpr"/>
+      </Position17>
+      <Position18>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="310" Column="80" TopLine="306"/>
+      </Position18>
+      <Position19>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="343" Column="26" TopLine="332"/>
+      </Position19>
+      <Position20>
+        <Filename Value="editor.pas"/>
+        <Caret Line="336" Column="26" TopLine="192"/>
+      </Position20>
+      <Position21>
+        <Filename Value="editor.pas"/>
+        <Caret Line="338" Column="26" TopLine="329"/>
+      </Position21>
+      <Position22>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="304" Column="23" TopLine="294"/>
+      </Position22>
+      <Position23>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="386" Column="4" TopLine="372"/>
+      </Position23>
+      <Position24>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="195" Column="27" TopLine="187"/>
+      </Position24>
+      <Position25>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="344" Column="3" TopLine="340"/>
+      </Position25>
+      <Position26>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="386" Column="3" TopLine="382"/>
+      </Position26>
+      <Position27>
+        <Filename Value="mainform.pas"/>
+        <Caret Line="194" Column="3" TopLine="190"/>
+      </Position27>
+      <Position28>
+        <Filename Value="editor.pas"/>
+        <Caret Line="508" Column="10" TopLine="495"/>
+      </Position28>
+      <Position29>
+        <Filename Value="editor.pas"/>
+        <Caret Line="507" Column="10" TopLine="494"/>
+      </Position29>
+      <Position30>
+        <Filename Value="editor.pas"/>
+        <Caret Line="508" Column="10" TopLine="495"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectSession>
+</CONFIG>

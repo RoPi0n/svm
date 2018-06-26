@@ -1,0 +1,85 @@
+unit MainForm;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
+  ComCtrls, Editor, Global;
+
+type
+
+  { TMainFrm }
+
+  TMainFrm = class(TForm)
+    MainMenu1: TMainMenu;
+    MenuItem1: TMenuItem;
+    MenuItem10: TMenuItem;
+    MenuItem11: TMenuItem;
+    MenuItem12: TMenuItem;
+    MenuItem13: TMenuItem;
+    MenuItem14: TMenuItem;
+    MenuItem15: TMenuItem;
+    MenuItem16: TMenuItem;
+    MenuItem17: TMenuItem;
+    MenuItem18: TMenuItem;
+    MenuItem19: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItem20: TMenuItem;
+    MenuItem21: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
+    MenuItem6: TMenuItem;
+    MenuItem7: TMenuItem;
+    MenuItem8: TMenuItem;
+    MenuItem9: TMenuItem;
+    PageControl: TPageControl;
+    StatusBar: TStatusBar;
+    procedure FormCreate(Sender: TObject);
+    procedure MenuItem2Click(Sender: TObject);
+    procedure OpenTab(FilePath,TabName:string; Operation:TOpenOp);
+  private
+    { private declarations }
+  public
+    { public declarations }
+  end;
+
+var
+  MainFrm: TMainFrm;
+  NewTabsCnt: cardinal = 0;
+
+implementation
+
+{$R *.lfm}
+
+{ TMainFrm }
+
+procedure TMainFrm.OpenTab(FilePath,TabName:string; Operation:TOpenOp);
+var
+  Editor:TEditorFrame;
+  Tab:TTabSheet;
+begin
+  Tab := TTabSheet.Create(PageControl);
+  Tab.Caption := TabName;
+  Tab.PageControl := PageControl;
+  Editor := TEditorFrame.CreateEditor(Tab,StatusBar);
+  Editor.Visible := True;
+  Editor.Parent := Tab;
+  Editor.Resize;
+end;
+
+procedure TMainFrm.MenuItem2Click(Sender: TObject);
+begin
+  inc(NewTabsCnt);
+  OpenTab('','New '+IntToStr(NewTabsCnt), opNew);
+end;
+
+procedure TMainFrm.FormCreate(Sender: TObject);
+begin
+
+end;
+
+end.
+

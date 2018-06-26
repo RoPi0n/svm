@@ -1,0 +1,114 @@
+object MainFrm: TMainFrm
+  Left = 424
+  Height = 497
+  Top = 143
+  Width = 772
+  Caption = 'SVMASM IDE'
+  ClientHeight = 477
+  ClientWidth = 772
+  Menu = MainMenu1
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  LCLVersion = '1.6.4.0'
+  object StatusBar: TStatusBar
+    Left = 0
+    Height = 23
+    Top = 454
+    Width = 772
+    AutoHint = True
+    Panels = <    
+      item
+        Text = 'File: ""'
+        Width = 50
+      end    
+      item
+        Text = 'Lines: 0'
+        Width = 50
+      end    
+      item
+        Text = 'CaretXY: 0/0'
+        Width = 50
+      end    
+      item
+        Text = 'Status: Saved'
+        Width = 50
+      end>
+    SimplePanel = False
+  end
+  object PageControl: TPageControl
+    Left = 0
+    Height = 454
+    Top = 0
+    Width = 772
+    Align = alClient
+    TabOrder = 1
+  end
+  object MainMenu1: TMainMenu
+    left = 128
+    top = 72
+    object MenuItem1: TMenuItem
+      Caption = 'File'
+      object MenuItem2: TMenuItem
+        Caption = 'New'
+        OnClick = MenuItem2Click
+      end
+      object MenuItem3: TMenuItem
+        Caption = 'Open'
+      end
+      object MenuItem4: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem5: TMenuItem
+        Caption = 'Save'
+      end
+      object MenuItem6: TMenuItem
+        Caption = 'Save as...'
+      end
+      object MenuItem7: TMenuItem
+        Caption = 'Save all'
+      end
+      object MenuItem8: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem9: TMenuItem
+        Caption = 'Exit'
+      end
+    end
+    object MenuItem10: TMenuItem
+      Caption = 'Edit'
+      object MenuItem11: TMenuItem
+        Caption = 'Undo'
+      end
+      object MenuItem12: TMenuItem
+        Caption = 'Redo'
+      end
+      object MenuItem13: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem14: TMenuItem
+        Caption = 'Find...'
+      end
+      object MenuItem15: TMenuItem
+        Caption = 'Replace...'
+      end
+      object MenuItem16: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem17: TMenuItem
+        Caption = 'Cut'
+      end
+      object MenuItem18: TMenuItem
+        Caption = 'Copy'
+      end
+      object MenuItem19: TMenuItem
+        Caption = 'Paste'
+      end
+      object MenuItem20: TMenuItem
+        Caption = 'Select all'
+      end
+    end
+    object MenuItem21: TMenuItem
+      Caption = 'View'
+    end
+  end
+end
