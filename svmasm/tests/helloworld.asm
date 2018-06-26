@@ -1,4 +1,5 @@
-import PrintLn "crt.lib" "PRINTLN"
+uses <bf.asm>
+uses <crt.asm>
 
 Main:
   invoke !PrintLn("Hello world!")

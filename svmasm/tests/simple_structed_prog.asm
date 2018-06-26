@@ -1,15 +1,13 @@
-import PrintLn "crt.lib" "PRINTLN"
+uses <bf.asm>
+uses <crt.asm>
 
 proc Summ($.a, $.b)
-   push $.a
-   push $.b
-   add
+   add $.a, $.b
 endp
 
 proc Main()
-  int _a 10
-  int _b 20
-  var a = !_a, b = !_b
-  call !Summ($a, $b)
-  invoke !PrintLn 
+  var .a = 10, .b = 20
+  call !Summ($.a, $.b)
+  invoke !PrintLn($.a)
+  invoke !InputLn
 endp

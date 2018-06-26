@@ -1,5 +1,5 @@
-import PrintLn "crt.lib" "PRINTLN"
-
+uses <bf.asm>
+uses <crt.asm>
 
 proc Main()
   var a = 3, b = 40, c = 0, d = 1, e = 0
@@ -7,10 +7,11 @@ proc Main()
   invoke !PrintLn(1)
   Lp1:
     mov  $e, $d
-	add  $d, $c
-	mov  $c, $e
-	invoke !PrintLn($d)
-	inc  $a
-	bg   $a, $b
-	jz   !Lp1
+    add  $d, $c
+    mov  $c, $e
+    invoke !PrintLn($d)
+    inc  $a
+    bg   $a, $b
+  jz   !Lp1
+  invoke !InputLn()
 endp

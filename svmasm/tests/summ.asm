@@ -1,6 +1,5 @@
-import PrintLn "crt.lib" "PRINTLN"
-import InputLn "crt.lib" "INPUTLN"
-import StrToFloat "bf.lib" "STRTOFLOAT"
+uses <bf.asm>
+uses <crt.asm>
 
 var a,b
 

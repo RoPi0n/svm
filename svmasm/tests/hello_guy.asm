@@ -1,12 +1,14 @@
-import PrintLn "crt.lib" "PRINTLN"
-import InputLn "crt.lib" "INPUTLN"
+uses <bf.asm>
+uses <crt.asm>
 
 
 proc Main()
-  invoke !PrintLn("Hello, what's your name?")
+  push   "Hello, what's your name?"
+  invoke !PrintLn
   invoke !InputLn
   push   "You good guy, "
   add 
   invoke !PrintLn
+  invoke !InputLn
   gc
 endp Main

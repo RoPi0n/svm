@@ -3,6 +3,8 @@ uses "forms.asm"
 
 var Form, Canvas
 
+;stream _Icon "form_icon.ico"
+
 str   _Caption  "Draw on me :)"
 
 var MouseDowned, LastMouseX, LastMouseY
@@ -35,8 +37,8 @@ proc FormThread_HandleEvent($.Event)
 
   Form_HandleEvent.FormClose:
     invoke !_Application_Terminate
-    super  ExitThread
     ;invoke !Halt
+    jump   !__haltpoint
   jump !Form_HandleEvent.End
 
   Form_HandleEvent.MouseMove:
@@ -80,6 +82,7 @@ proc FormThread()
   invoke !_Form_SetWidth($Form, 500)
   invoke !_Form_SetHeight($Form, 500)
   invoke !_Form_SetCaption($Form, !_Caption)
+  ;invoke !_Form_LoadIconFromStream($Form, !_Icon)
   invoke !_Form_GetCanvas($Form)
   pop    $Canvas
   invoke !_Form_Show($Form)
@@ -97,6 +100,7 @@ endp
 
 proc Main()
   invoke !_Application_Initialize
+  ;invoke !_Application_LoadIconFromStream(!_Icon)
   invoke !_Application_CreateForm
   call   !FormThread
   push   !FormThread

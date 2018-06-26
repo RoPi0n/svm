@@ -12,6 +12,5 @@ proc Main()
     invoke !PrintLn
   Finally:
     invoke !PrintLn(":)")
-    invoke !InputLn
     gc
 endp
