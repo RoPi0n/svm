@@ -3,7 +3,7 @@ program svmasm;
 {$Mode objfpc}
 {$H+}
 
-uses SysUtils, Classes;
+uses SysUtils, Classes, StrUtils;
 
 {** Methods **}
 
@@ -79,35 +79,42 @@ end;
 
 procedure St_WriteWord(s:TStream; w:word);
 begin
-  s.WriteByte(PByte(@w+1)^);
+  s.WriteByte(PByte(cardinal(@w)+1)^);
   s.WriteByte(PByte(@w)^);
 end;
 
 procedure St_WriteCardinal(s:TStream; c:cardinal);
 begin
-  s.WriteByte(PByte(@c+3)^);
-  s.WriteByte(PByte(@c+2)^);
-  s.WriteByte(PByte(@c+1)^);
+  s.WriteByte(PByte(cardinal(@c)+3)^);
+  s.WriteByte(PByte(cardinal(@c)+2)^);
+  s.WriteByte(PByte(cardinal(@c)+1)^);
   s.WriteByte(PByte(@c)^);
 end;
 
 procedure St_WriteInt64(s:TStream; i:Int64);
 begin
-  s.WriteByte(PByte(@i+3)^);
-  s.WriteByte(PByte(@i+2)^);
-  s.WriteByte(PByte(@i+1)^);
+  if i<0 then
+   begin
+     s.WriteByte(1);
+     i := -i;
+   end
+  else
+   s.WriteByte(0);
+  s.WriteByte(PByte(cardinal(@i)+3)^);
+  s.WriteByte(PByte(cardinal(@i)+2)^);
+  s.WriteByte(PByte(cardinal(@i)+1)^);
   s.WriteByte(PByte(@i)^);
 end;
 
 procedure St_WriteDouble(s:TStream; d:double);
 begin
-  s.WriteByte(PByte(@d+7)^);
-  s.WriteByte(PByte(@d+6)^);
-  s.WriteByte(PByte(@d+5)^);
-  s.WriteByte(PByte(@d+4)^);
-  s.WriteByte(PByte(@d+3)^);
-  s.WriteByte(PByte(@d+2)^);
-  s.WriteByte(PByte(@d+1)^);
+  s.WriteByte(PByte(cardinal(@d)+7)^);
+  s.WriteByte(PByte(cardinal(@d)+6)^);
+  s.WriteByte(PByte(cardinal(@d)+5)^);
+  s.WriteByte(PByte(cardinal(@d)+4)^);
+  s.WriteByte(PByte(cardinal(@d)+3)^);
+  s.WriteByte(PByte(cardinal(@d)+2)^);
+  s.WriteByte(PByte(cardinal(@d)+1)^);
   s.WriteByte(PByte(@d)^);
 end;
 
@@ -248,12 +255,32 @@ begin
    AsmError('Invalid variable call "'+s+'".');
 end;
 
-function IsWord(s:string):boolean;
+function IsWord(var s:string):boolean;
 var
   w:word;
 begin
   Result := Length(s)>0;
   w := 1;
+  if Length(s)>2 then
+   begin
+     if (s[1] = '0') and (s[2] = 'x') then
+      begin
+        Delete(s,1,2);
+        while w <= Length(s) do
+         begin
+           Result := Result and (s[w] in ['0'..'9', 'a'..'f']);
+           inc(w);
+         end;
+        s := '$' + s;
+      end
+     else
+     while w <= Length(s) do
+      begin
+        Result := Result and (s[w] in ['0'..'9']);
+        inc(w);
+      end;
+   end
+  else
   while w <= Length(s) do
    begin
      Result := Result and (s[w] in ['0'..'9']);
@@ -656,6 +683,31 @@ begin
    end;
 end;
 
+function tkpos(tk, s:string):cardinal;
+var
+  R:Cardinal;
+begin
+  Result := 0;
+  R := 0;
+  while Length(s)>0 do
+   begin
+     if s[1] = '"' then
+      begin
+        delete(s,1,1);
+        inc(R,Pos('"',s)+1);
+        delete(s,1,pos('"',s));
+      end;
+     if pos(tk,s) = 1 then
+      begin
+       inc(R);
+       Result := R;
+       break
+      end;
+     delete(s,1,1);
+     inc(R);
+   end;
+end;
+
 function PreprocessCall(s:string; varmgr:TVarManager):string;
 var
   bf,pn:string;
@@ -664,16 +716,17 @@ begin
   Result := '';
   pn := GetProcName(Trim(s));
   Delete(s,1,pos('(',s));
-  Delete(s,pos(')',s),length(s));
+  Delete(s,tkpos(')',s),length(s));
   cnt := 0;
   while length(s)>0 do
    begin
      bf := '';
      if pos(',',s)>0 then
       begin
-        s := Trim(s);
-        bf := Copy(s,1,pos(',',s)-1);
+        s := Trim(ReverseString(s));
+        bf := Trim(ReverseString(Copy(s,1,pos(',',s)-1)));
         Delete(s,1,pos(',',s));
+        s := Trim(ReverseString(s));
       end
      else
       begin
@@ -691,8 +744,6 @@ begin
      else
       AsmError('Invalid call "'+pn+'".');
      inc(cnt);
-     if cnt > 1 then
-      Result := Result + sLineBreak + 'swp';
    end;
 end;
 
@@ -704,15 +755,15 @@ var
 begin
   Result := '';
   {** Include **}
-  if Tk(s,1) = 'include' then
+  if Tk(s,1) = 'uses' then
    begin
-     delete(s,1,length('include'));
+     delete(s,1,length('uses'));
      s := Trim(s);
      case s[1] of
       '"':begin
             delete(s,1,1);
             if pos('"',s)<>Length(s) then
-             AsmError('Invalid construction: "import "'+s+'".');
+             AsmError('Invalid construction: "uses "'+s+'".');
             delete(s,length(s),1);
             s := ExtractFilePath(ParamStr(1)) + s;
             if not FileExists(s) then
@@ -723,6 +774,8 @@ begin
              begin
                for c := 0 to sl.Count-1 do
                 sl[c] := TrimCodeStr(sl[c]);
+               for c := 0 to sl.Count-1 do
+                sl[c] := PreprocessStr(sl[c], varmgr);
                for c:=sl.count-1 downto 0 do
                 if trim(sl[c])='' then sl.delete(c);
              end;
@@ -731,8 +784,8 @@ begin
           end;
       '<':begin
             delete(s,1,1);
-            if pos('<',s)<>Length(s) then
-             AsmError('Invalid construction: "import <'+s+'".');
+            if pos('>',s)<>Length(s) then
+             AsmError('Invalid construction: "uses <'+s+'".');
             delete(s,length(s),1);
             s := ExtractFilePath(ParamStr(0)) + 'inc\' + s;
             if not FileExists(s) then
@@ -746,6 +799,8 @@ begin
                 begin
                   for c := 0 to sl.Count-1 do
                    sl[c] := TrimCodeStr(sl[c]);
+                  for c := 0 to sl.Count-1 do
+                   sl[c] := PreprocessStr(sl[c], varmgr);
                   for c:=sl.count-1 downto 0 do
                    if trim(sl[c])='' then sl.delete(c);
                 end;
@@ -754,7 +809,7 @@ begin
              end;
           end;
       else
-        AsmError('Invalid construction: "import '+s+'".');
+        AsmError('Invalid construction: "uses '+s+'".');
      end;
    end
   else
@@ -794,19 +849,13 @@ begin
         Delete(LocalVarPref, Pos(s,LocalVarPref), Length(s));
       end
      else
-      AsmError('Invalid endp :\ ...');
+      AsmError('Invalid endp ...');
      Result := 'jr';
    end
   else
   if Tk(s,1) = 'super' then
    begin
-     if Tk(s,2) = 'thread' then
-      Result := 'pushc __addrtsz'+sLineBreak+
-                'gpm'+sLineBreak+
-                'msz'+sLineBreak+
-                'gc'
-     else
-      AsmError('in "'+s+'"');
+     Result := 'pushc super.'+Tk(s,2)+sLineBreak+'gpm'+sLineBreak+'jc';
    end
   else
   if Tk(s,1) = 'store' then
@@ -820,24 +869,22 @@ begin
       Result := PreprocessVarAction(s,'push',varmgr)
      else
      if IsConst(s) then
-      Result := 'pushc '+GetConst(s) + sLineBreak + 'gpm'
+      Result := 'pushc '+GetConst(s)
      else
      if IsArr(s) then
       Result := PreprocessArrAction(s,'pushai',varmgr)
      else
       AsmError('Invalid store operation with "'+s+'".');
      Result := Result + sLineBreak +
-               'new' + sLineBreak +
+               'pushc store' + sLineBreak +
                'gpm' + sLineBreak +
-               'pushbp' + sLineBreak +
-               'mov';
+               'jc';
    end
   else
   if Tk(s,1) = 'load' then
    begin
      delete(s,1,length('load'));
      s := Trim(s);
-     Result := 'peekb' + sLineBreak;
      if s = '!null' then
       AsmError('Invalid load operation with null.')
      else
@@ -851,7 +898,10 @@ begin
       Result := Result + sLineBreak + PreprocessArrAction(s,'pushai',varmgr)
      else
       AsmError('Invalid load operation with "'+s+'".');
-     Result := Result + sLineBreak + 'mov';
+     Result := Result + sLineBreak +
+               'pushc load' + sLineBreak +
+               'gpm' + sLineBreak +
+               'jc';
    end
   else
   {** Anything **}
@@ -940,6 +990,63 @@ begin
         else
          AsmError('Invalid call "'+s+'".');
         Result :=Result + sLineBreak + 'jp';
+      end
+     else
+     if Tk(s,1) = 'try' then
+      begin
+        delete(s,1,length('try'));
+        s := Trim(s);
+        if pos(',',s)>0 then
+         begin
+           s1 := copy(s,1,pos(',',s)-1);
+           if IsVar(s1) then
+            Result := PreprocessVarAction(s1,'push',varmgr)
+           else
+           if IsConst(s1) then
+            Result := Result + sLineBreak + 'pushc '+GetConst(s1)+sLineBreak+'gpm'
+           else
+           if IsArr(s1) then
+            Result := PreprocessArrAction(s1,'pushai',varmgr)
+           else
+            AsmError('Try operation -> "'+s1+'".');
+           Delete(s,1,pos(',',s));
+           s := Trim(s);
+           if IsVar(s) then
+            Result := Result + sLineBreak + PreprocessVarAction(s,'push',varmgr)
+           else
+           if IsConst(s) then
+            Result := Result + sLineBreak + 'pushc '+GetConst(s)+sLineBreak+'gpm'
+           else
+           if IsArr(s) then
+            Result := Result + sLineBreak + PreprocessArrAction(s,'pushai',varmgr)
+           else
+            AsmError('Try operation -> "'+s+'".');
+           Result := Result + sLineBreak + 'swp';
+           Result := Result + sLineBreak + 'tr';
+         end
+        else
+        if s = 'end' then
+         Result := 'trs'
+        else
+         AsmError('Try operation -> "try '+s+'"');
+      end
+     else
+     if Tk(s,1) = 'raise' then
+      begin
+        delete(s,1,length('push'));
+        s := Trim(s);
+        if s = '!null' then
+         Result := 'pushn'
+        else
+        if IsVar(s) then
+         Result := PreprocessVarAction(s,'push',varmgr)
+        else
+        if IsConst(s) then
+         Result := 'pushc '+GetConst(s)
+        else
+        if IsArr(s) then
+         Result := PreprocessArrAction(s,'pushai',varmgr);
+        Result := Result + 'trr';
       end
      else
      if Tk(s,1) = 'jz' then
@@ -1479,6 +1586,227 @@ begin
          end;
       end
      else
+     if Tk(s,1) = 'movl' then
+      begin
+        delete(s,1,length('movl'));
+        s := Trim(s);
+        if pos(',',s)>0 then
+         begin
+           s1 := copy(s,1,pos(',',s)-1);
+           Delete(s,1,pos(',',s));
+           s := Trim(s);
+           if IsVar(s) then
+            Result := PreprocessVarAction(s,'push',varmgr)
+           else
+           if IsConst(s) then
+            AsmError('Movl operation not intended to constants -> "'+s+'"')
+           else
+           if IsArr(s) then
+            Result := PreprocessArrAction(s,'pushai',varmgr)
+           else
+            AsmError('Movl operation -> "'+s1+'".');
+           if IsVar(s1) then
+            Result := Result + sLineBreak + PreprocessVarAction(s1,'peek',varmgr)
+           else
+           if IsConst(s1) then
+            AsmError('Movl operation not intended to constants -> "'+s1+'"')
+           else
+           if IsArr(s1) then
+            Result := Result + sLineBreak + PreprocessArrAction(s1,'peekai',varmgr)
+           else
+            AsmError('Movl operation -> "'+s1+'".');
+           Result := Result + sLineBreak + 'pop';
+         end;
+      end
+     else
+     if Tk(s,1) = 'not' then
+      begin
+        delete(s,1,length('not'));
+        s := Trim(s);
+        if IsVar(s) then
+         Result := PreprocessVarAction(s,'push',varmgr)
+        else
+        if IsConst(s) then
+         AsmError('Not constant value "'+s+'".')
+        else
+        if IsArr(s) then
+         Result := PreprocessArrAction(s,'pushai',varmgr)
+        else
+         AsmError('Not "'+s+'"');
+        Result := Result + sLineBreak + 'not';
+        Result := Result + sLineBreak + 'pop';
+      end
+     else
+     if Tk(s,1) = 'and' then
+      begin
+        delete(s,1,length('and'));
+        s := Trim(s);
+        if pos(',',s)>0 then
+         begin
+           s1 := copy(s,1,pos(',',s)-1);
+           if IsVar(s1) then
+            Result := PreprocessVarAction(s1,'push',varmgr)
+           else
+           if IsConst(s1) then
+            AsmError('And operation not intended to constants -> "'+s1+'"')
+           else
+           if IsArr(s1) then
+            Result := PreprocessArrAction(s1,'pushai',varmgr)
+           else
+            AsmError('And operation -> "'+s1+'".');
+           Delete(s,1,pos(',',s));
+           s := Trim(s);
+           if IsVar(s) then
+            Result := Result + sLineBreak + PreprocessVarAction(s,'push',varmgr)
+           else
+           if IsConst(s) then
+            Result := Result + sLineBreak + 'pushc '+GetConst(s)+sLineBreak+'gpm'
+           else
+           if IsArr(s) then
+            Result := Result + sLineBreak + PreprocessArrAction(s,'pushai',varmgr)
+           else
+            AsmError('And operation -> "'+s+'".');
+           Result := Result + sLineBreak + 'swp';
+           Result := Result + sLineBreak + 'and';
+         end;
+      end
+     else
+     if Tk(s,1) = 'or' then
+      begin
+        delete(s,1,length('or'));
+        s := Trim(s);
+        if pos(',',s)>0 then
+         begin
+           s1 := copy(s,1,pos(',',s)-1);
+           if IsVar(s1) then
+            Result := PreprocessVarAction(s1,'push',varmgr)
+           else
+           if IsConst(s1) then
+            AsmError('Or operation not intended to constants -> "'+s1+'"')
+           else
+           if IsArr(s1) then
+            Result := PreprocessArrAction(s1,'pushai',varmgr)
+           else
+            AsmError('Or operation -> "'+s1+'".');
+           Delete(s,1,pos(',',s));
+           s := Trim(s);
+           if IsVar(s) then
+            Result := Result + sLineBreak + PreprocessVarAction(s,'push',varmgr)
+           else
+           if IsConst(s) then
+            Result := Result + sLineBreak + 'pushc '+GetConst(s)+sLineBreak+'gpm'
+           else
+           if IsArr(s) then
+            Result := Result + sLineBreak + PreprocessArrAction(s,'pushai',varmgr)
+           else
+            AsmError('Or operation -> "'+s+'".');
+           Result := Result + sLineBreak + 'swp';
+           Result := Result + sLineBreak + 'or';
+         end;
+      end
+     else
+     if Tk(s,1) = 'xor' then
+      begin
+        delete(s,1,length('xor'));
+        s := Trim(s);
+        if pos(',',s)>0 then
+         begin
+           s1 := copy(s,1,pos(',',s)-1);
+           if IsVar(s1) then
+            Result := PreprocessVarAction(s1,'push',varmgr)
+           else
+           if IsConst(s1) then
+            AsmError('Xor operation not intended to constants -> "'+s1+'"')
+           else
+           if IsArr(s1) then
+            Result := PreprocessArrAction(s1,'pushai',varmgr)
+           else
+            AsmError('Xor operation -> "'+s1+'".');
+           Delete(s,1,pos(',',s));
+           s := Trim(s);
+           if IsVar(s) then
+            Result := Result + sLineBreak + PreprocessVarAction(s,'push',varmgr)
+           else
+           if IsConst(s) then
+            Result := Result + sLineBreak + 'pushc '+GetConst(s)+sLineBreak+'gpm'
+           else
+           if IsArr(s) then
+            Result := Result + sLineBreak + PreprocessArrAction(s,'pushai',varmgr)
+           else
+            AsmError('Xor operation -> "'+s+'".');
+           Result := Result + sLineBreak + 'swp';
+           Result := Result + sLineBreak + 'xor';
+         end;
+      end
+     else
+     if Tk(s,1) = 'shl' then
+      begin
+        delete(s,1,length('shl'));
+        s := Trim(s);
+        if pos(',',s)>0 then
+         begin
+           s1 := copy(s,1,pos(',',s)-1);
+           if IsVar(s1) then
+            Result := PreprocessVarAction(s1,'push',varmgr)
+           else
+           if IsConst(s1) then
+            AsmError('Shl operation not intended to constants -> "'+s1+'"')
+           else
+           if IsArr(s1) then
+            Result := PreprocessArrAction(s1,'pushai',varmgr)
+           else
+            AsmError('Shl operation -> "'+s1+'".');
+           Delete(s,1,pos(',',s));
+           s := Trim(s);
+           if IsVar(s) then
+            Result := Result + sLineBreak + PreprocessVarAction(s,'push',varmgr)
+           else
+           if IsConst(s) then
+            Result := Result + sLineBreak + 'pushc '+GetConst(s)+sLineBreak+'gpm'
+           else
+           if IsArr(s) then
+            Result := Result + sLineBreak + PreprocessArrAction(s,'pushai',varmgr)
+           else
+            AsmError('Shl operation -> "'+s+'".');
+           Result := Result + sLineBreak + 'swp';
+           Result := Result + sLineBreak + 'shl';
+         end;
+      end
+     else
+     if Tk(s,1) = 'shr' then
+      begin
+        delete(s,1,length('shr'));
+        s := Trim(s);
+        if pos(',',s)>0 then
+         begin
+           s1 := copy(s,1,pos(',',s)-1);
+           if IsVar(s1) then
+            Result := PreprocessVarAction(s1,'push',varmgr)
+           else
+           if IsConst(s1) then
+            AsmError('Shr operation not intended to constants -> "'+s1+'"')
+           else
+           if IsArr(s1) then
+            Result := PreprocessArrAction(s1,'pushai',varmgr)
+           else
+            AsmError('Shr operation -> "'+s1+'".');
+           Delete(s,1,pos(',',s));
+           s := Trim(s);
+           if IsVar(s) then
+            Result := Result + sLineBreak + PreprocessVarAction(s,'push',varmgr)
+           else
+           if IsConst(s) then
+            Result := Result + sLineBreak + 'pushc '+GetConst(s)+sLineBreak+'gpm'
+           else
+           if IsArr(s) then
+            Result := Result + sLineBreak + PreprocessArrAction(s,'pushai',varmgr)
+           else
+            AsmError('Shr operation -> "'+s+'".');
+           Result := Result + sLineBreak + 'swp';
+           Result := Result + sLineBreak + 'shr';
+         end;
+      end
+     else
      Result := s;
    end
   else
@@ -1940,80 +2268,154 @@ begin
 end;
 
 type TComand = (
-   bcPH,     // [top] = [var]
-   bcPK,     // [var] = [top]
-   bcPP,     // pop
-   bcSDP,    // stkdrop
-   bcSWP,    // [top] <-> [top-1]
-   bcJP,     // jump [top]
-   bcJZ,     // [top] == 0 ? jp [top-1]
-   bcJN,     // [top] <> 0 ? jp [top-1]
-   bcJC,     // jp [top] & push callback point as ip+1
-   bcJR,     // jp to last callback point & rem last callback point
+    bcPH,     // [top] = [var]
+    bcPK,     // [var] = [top]
+    bcPP,     // pop
+    bcSDP,    // stkdrop
+    bcSWP,    // [top] <-> [top-1]
+    bcJP,     // jump [top]
+    bcJZ,     // [top] == 0 ? jp [top-1]
+    bcJN,     // [top] <> 0 ? jp [top-1]
+    bcJC,     // jp [top] & push callback point as ip+1
+    bcJR,     // jp to last callback point & rem last callback point
 
-   bcEQ,     // [top] == [top-1] ? [top] = 1 : [top] = 0
-   bcBG,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
-   bcBE,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
+    bcEQ,     // [top] == [top-1] ? [top] = 1 : [top] = 0
+    bcBG,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
+    bcBE,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
 
-   bcNOT,    // [top] = ![top]
-   bcAND,    // [top] = [top] and [top-1]
-   bcOR,     // [top] = [top] or  [top-1]
-   bcXOR,    // [top] = [top] xor [top-1]
-   bcSHR,    // [top] = [top] shr [top-1]
-   bcSHL,    // [top] = [top] shl [top-1]
+    bcNOT,    // [top] = ![top]
+    bcAND,    // [top] = [top] and [top-1]
+    bcOR,     // [top] = [top] or  [top-1]
+    bcXOR,    // [top] = [top] xor [top-1]
+    bcSHR,    // [top] = [top] shr [top-1]
+    bcSHL,    // [top] = [top] shl [top-1]
 
-   bcNEG,    // [top] = -[top]
-   bcINC,    // [top]++
-   bcDEC,    // [top]--
-   bcADD,    // [top] = [top] + [top-1]
-   bcSUB,    // [top] = [top] - [top-1]
-   bcMUL,    // [top] = [top] * [top-1]
-   bcDIV,    // [top] = [top] / [top-1]
-   bcMOD,    // [top] = [top] % [top-1]
-   bcIDIV,   // [top] = [top] \ [top-1]
+    bcNEG,    // [top] = -[top]
+    bcINC,    // [top]++
+    bcDEC,    // [top]--
+    bcADD,    // [top] = [top] + [top-1]
+    bcSUB,    // [top] = [top] - [top-1]
+    bcMUL,    // [top] = [top] * [top-1]
+    bcDIV,    // [top] = [top] / [top-1]
+    bcMOD,    // [top] = [top] % [top-1]
+    bcIDIV,   // [top] = [top] \ [top-1]
 
-   bcMV,     // [top]^ = [top-1]^
-   bcMVBP,   // [top]^^ = [top-1]^
-   bcMVP,    // [top]^ = [top-1]
-   
-   bcMS,     // memory map size = [top]
-   bcNW,     // [top] = @new
-   bcMC,     // copy [top]
-   bcMD,     // double [top]
-   bcRM,     // rem @[top]
-   bcNA,     // [top] = @new array[  [top]  ] of pointer
-   bcSF,     // sizeof( [top] as object )
-   bcAL,     // length( [top] as array )
-   bcSL,     // setlength( [top] as array, {stack} )
+    bcMV,     // [top]^ = [top-1]^
+    bcMVBP,   // [top]^^ = [top-1]^
+    bcMVP,    // [top]^ = [top-1]
 
-   bcPA,     // push ([top] as array)[top-1]
-   bcSA,     // peek [top-2] -> ([top] as array)[top-1]
+    bcMS,     // memory map size = [top]
+    bcNW,     // [top] = @new
+    bcMC,     // copy [top]
+    bcMD,     // double [top]
+    bcRM,     // rem @[top]
+    bcNA,     // [top] = @new array[  [top]  ] of pointer
+    bcSF,     // sizeof( [top] as object )
+    bcAL,     // length( [top] as array )
+    bcSL,     // setlength( [top] as array, {stack} )
 
-   bcGPM,    // add pointer to TMem to grabber task-list
-   bcGPA,    // add pointer to TMemArr to grabber task-list
-   bcGC,     // run grabber
+    bcPA,     // push ([top] as array)[top-1]
+    bcSA,     // peek [top-2] -> ([top] as array)[top-1]
 
-   bcPHC,    // push const
+    bcGPM,    // add pointer to TMem to grabber task-list
+    bcGPA,    // add pointer to TMemArr to grabber task-list
+    bcGC,     // run grabber
 
-   bcPHEXMP, // push pointer to external method
-   bcINV,    // call external method
-   bcINVBP,  // call externam method by pointer [top]
+    bcPHC,    // push const
 
-   bcPHN,    // push null
-   bcCTHR,   // [top] = thread(method = [top], arg = [top+1]):id
-   bcSTHR,   // suspendthread(id = [top])
-   bcRTHR,   // resumethread(id = [top])
-   bcTTHR,   // terminatethread(id = [top])
+    bcPHEXMP, // push pointer to external method
+    bcINV,    // call external method
+    bcINVBP,  // call external method by pointer [top]
 
-   bcTR,    // try @block_catch = [top], @block_end = [top+1]
-   bcTRS,   // success exit from try/catch block
-   bcTRR,   // raise exception, message = [top]
+    bcPHN,    // push null
+    bcCTHR,   // [top] = thread(method = [top], arg = [top+1]):id
+    bcSTHR,   // suspendthread(id = [top])
+    bcRTHR,   // resumethread(id = [top])
+    bcTTHR,   // terminatethread(id = [top])
 
-   bcPHS,   // [top]  --> [top2]
-   bcPKS,   // [top2] --> [top]
-   bcPPS,   // [top2] --> X
-   bcPHSP
-  );
+    bcTR,     // try @block_catch = [top], @block_end = [top+1]
+    bcTRS,    // success exit from try/catch block
+    bcTRR,    // raise exception, message = [top]
+
+    {** for word's **}
+    bcEQ_W,     // [top] == [top-1] ? [top] = 1 : [top] = 0
+    bcBG_W,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
+    bcBE_W,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
+
+    bcNOT_W,    // [top] = ![top]
+    bcAND_W,    // [top] = [top] and [top-1]
+    bcOR_W,     // [top] = [top] or  [top-1]
+    bcXOR_W,    // [top] = [top] xor [top-1]
+    bcSHR_W,    // [top] = [top] shr [top-1]
+    bcSHL_W,    // [top] = [top] shl [top-1]
+
+    bcINC_W,    // [top]++
+    bcDEC_W,    // [top]--
+    bcADD_W,    // [top] = [top] + [top-1]
+    bcSUB_W,    // [top] = [top] - [top-1]
+    bcMUL_W,    // [top] = [top] * [top-1]
+    bcDIV_W,    // [top] = [top] / [top-1]
+    bcMOD_W,    // [top] = [top] % [top-1]
+    bcIDIV_W,   // [top] = [top] \ [top-1]
+
+    bcMV_W,     // [top]^ = [top-1]^
+    bcMVBP_W,   // [top]^^ = [top-1]^
+
+    {** for integer's **}
+    bcEQ_I,     // [top] == [top-1] ? [top] = 1 : [top] = 0
+    bcBG_I,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
+    bcBE_I,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
+
+    bcNOT_I,    // [top] = ![top]
+    bcAND_I,    // [top] = [top] and [top-1]
+    bcOR_I,     // [top] = [top] or  [top-1]
+    bcXOR_I,    // [top] = [top] xor [top-1]
+    bcSHR_I,    // [top] = [top] shr [top-1]
+    bcSHL_I,    // [top] = [top] shl [top-1]
+
+    bcNEG_I,    // [top] = -[top]
+    bcINC_I,    // [top]++
+    bcDEC_I,    // [top]--
+    bcADD_I,    // [top] = [top] + [top-1]
+    bcSUB_I,    // [top] = [top] - [top-1]
+    bcMUL_I,    // [top] = [top] * [top-1]
+    bcDIV_I,    // [top] = [top] / [top-1]
+    bcMOD_I,    // [top] = [top] % [top-1]
+    bcIDIV_I,   // [top] = [top] \ [top-1]
+
+    bcMV_I,     // [top]^ = [top-1]^
+    bcMVBP_I,   // [top]^^ = [top-1]^
+
+    {** for digit's with floating point **}
+    bcEQ_D,     // [top] == [top-1] ? [top] = 1 : [top] = 0
+    bcBG_D,     // [top] >  [top-1] ? [top] = 1 : [top] = 0
+    bcBE_D,     // [top] >= [top-1] ? [top] = 1 : [top] = 0
+
+    bcNEG_D,    // [top] = -[top]
+    bcINC_D,    // [top]++
+    bcDEC_D,    // [top]--
+    bcADD_D,    // [top] = [top] + [top-1]
+    bcSUB_D,    // [top] = [top] - [top-1]
+    bcMUL_D,    // [top] = [top] * [top-1]
+    bcDIV_D,    // [top] = [top] / [top-1]
+    bcMOD_D,    // [top] = [top] % [top-1]
+    bcIDIV_D,   // [top] = [top] \ [top-1]
+
+    bcMV_D,     // [top]^ = [top-1]^
+    bcMVBP_D,   // [top]^^ = [top-1]^
+
+    {** for string's **}
+    bcEQ_S,
+    bcADD_S,
+    bcMV_S,
+    bcMVBP_S,
+    bcSTRL,     // strlen
+    bcSTRD,     // strdel
+    bcSTCHATP,  // push str[x]
+    bcSTCHATK,  // peek str[x]
+    bcCHORD,
+    bcORDCH
+    );
 
 procedure TCodeSection.ParseSection;
 var
@@ -2226,17 +2628,194 @@ begin
     if Tk(s,1) = 'trr' then
      Outp.WriteByte(byte(bcTRR))
     else
-    if Tk(s,1) = 'pushb' then
-     Outp.WriteByte(byte(bcPHS))
+    if Tk(s,1) = 'eqw' then
+     Outp.WriteByte(byte(bcEQ_W))
     else
-    if Tk(s,1) = 'peekb' then
-     Outp.WriteByte(byte(bcPKS))
+    if Tk(s,1) = 'bgw' then
+     Outp.WriteByte(byte(bcBG_W))
     else
-    if Tk(s,1) = 'popb' then
-     Outp.WriteByte(byte(bcPPS))
+    if Tk(s,1) = 'bew' then
+     Outp.WriteByte(byte(bcBE_W))
     else
-    if Tk(s,1) = 'pushbp' then
-     Outp.WriteByte(byte(bcPHSP))
+    if Tk(s,1) = 'notw' then
+     Outp.WriteByte(byte(bcNOT_W))
+    else
+    if Tk(s,1) = 'andw' then
+     Outp.WriteByte(byte(bcAND_W))
+    else
+    if Tk(s,1) = 'orw' then
+     Outp.WriteByte(byte(bcOR_W))
+    else
+    if Tk(s,1) = 'xorw' then
+     Outp.WriteByte(byte(bcXOR_W))
+    else
+    if Tk(s,1) = 'shrw' then
+     Outp.WriteByte(byte(bcSHR_W))
+    else
+    if Tk(s,1) = 'shlw' then
+     Outp.WriteByte(byte(bcSHL_W))
+     else
+    if Tk(s,1) = 'eqi' then
+     Outp.WriteByte(byte(bcEQ_I))
+    else
+    if Tk(s,1) = 'bgi' then
+     Outp.WriteByte(byte(bcBG_I))
+    else
+    if Tk(s,1) = 'bei' then
+     Outp.WriteByte(byte(bcBE_I))
+    else
+    if Tk(s,1) = 'noti' then
+     Outp.WriteByte(byte(bcNOT_I))
+    else
+    if Tk(s,1) = 'andi' then
+     Outp.WriteByte(byte(bcAND_I))
+    else
+    if Tk(s,1) = 'ori' then
+     Outp.WriteByte(byte(bcOR_I))
+    else
+    if Tk(s,1) = 'xori' then
+     Outp.WriteByte(byte(bcXOR_I))
+    else
+    if Tk(s,1) = 'shri' then
+     Outp.WriteByte(byte(bcSHR_I))
+    else
+    if Tk(s,1) = 'shli' then
+     Outp.WriteByte(byte(bcSHL_I))
+    else
+    if Tk(s,1) = 'eqd' then
+     Outp.WriteByte(byte(bcEQ_D))
+    else
+    if Tk(s,1) = 'bgd' then
+     Outp.WriteByte(byte(bcBG_D))
+    else
+    if Tk(s,1) = 'bed' then
+     Outp.WriteByte(byte(bcBE_D))
+    else
+    if Tk(s,1) = 'incw' then
+     Outp.WriteByte(byte(bcINC_W))
+    else
+    if Tk(s,1) = 'decw' then
+     Outp.WriteByte(byte(bcDEC_W))
+    else
+    if Tk(s,1) = 'addw' then
+     Outp.WriteByte(byte(bcADD_W))
+    else
+    if Tk(s,1) = 'subw' then
+     Outp.WriteByte(byte(bcSUB_W))
+    else
+    if Tk(s,1) = 'mulw' then
+     Outp.WriteByte(byte(bcMUL_W))
+    else
+    if Tk(s,1) = 'divw' then
+     Outp.WriteByte(byte(bcDIV_W))
+    else
+    if Tk(s,1) = 'modw' then
+     Outp.WriteByte(byte(bcMOD_W))
+    else
+    if Tk(s,1) = 'idivw' then
+     Outp.WriteByte(byte(bcIDIV_W))
+    else
+    if Tk(s,1) = 'mvw' then
+     Outp.WriteByte(byte(bcMV_W))
+    else
+    if Tk(s,1) = 'mvbpw' then
+     Outp.WriteByte(byte(bcMVBP_W))
+    else
+    if Tk(s,1) = 'negi' then
+     Outp.WriteByte(byte(bcNEG_I))
+    else
+    if Tk(s,1) = 'inci' then
+     Outp.WriteByte(byte(bcINC_I))
+    else
+    if Tk(s,1) = 'deci' then
+     Outp.WriteByte(byte(bcDEC_I))
+    else
+    if Tk(s,1) = 'addi' then
+     Outp.WriteByte(byte(bcADD_I))
+    else
+    if Tk(s,1) = 'subi' then
+     Outp.WriteByte(byte(bcSUB_I))
+    else
+    if Tk(s,1) = 'muli' then
+     Outp.WriteByte(byte(bcMUL_I))
+    else
+    if Tk(s,1) = 'divi' then
+     Outp.WriteByte(byte(bcDIV_I))
+    else
+    if Tk(s,1) = 'modi' then
+     Outp.WriteByte(byte(bcMOD_I))
+    else
+    if Tk(s,1) = 'idivi' then
+     Outp.WriteByte(byte(bcIDIV_I))
+    else
+    if Tk(s,1) = 'mvi' then
+     Outp.WriteByte(byte(bcMV_I))
+    else
+    if Tk(s,1) = 'mvbpi' then
+     Outp.WriteByte(byte(bcMVBP_I))
+    else
+    if Tk(s,1) = 'negd' then
+     Outp.WriteByte(byte(bcNEG_D))
+    else
+    if Tk(s,1) = 'incd' then
+     Outp.WriteByte(byte(bcINC_D))
+    else
+    if Tk(s,1) = 'decd' then
+     Outp.WriteByte(byte(bcDEC_D))
+    else
+    if Tk(s,1) = 'addd' then
+     Outp.WriteByte(byte(bcADD_D))
+    else
+    if Tk(s,1) = 'subd' then
+     Outp.WriteByte(byte(bcSUB_D))
+    else
+    if Tk(s,1) = 'muld' then
+     Outp.WriteByte(byte(bcMUL_D))
+    else
+    if Tk(s,1) = 'divd' then
+     Outp.WriteByte(byte(bcDIV_D))
+    else
+    if Tk(s,1) = 'modd' then
+     Outp.WriteByte(byte(bcMOD_D))
+    else
+    if Tk(s,1) = 'idivd' then
+     Outp.WriteByte(byte(bcIDIV_D))
+    else
+    if Tk(s,1) = 'mvd' then
+     Outp.WriteByte(byte(bcMV_D))
+    else
+    if Tk(s,1) = 'mvbpd' then
+     Outp.WriteByte(byte(bcMVBP_D))
+    else
+    if Tk(s,1) = 'eqs' then
+     Outp.WriteByte(byte(bcEQ_S))
+    else
+    if Tk(s,1) = 'adds' then
+     Outp.WriteByte(byte(bcADD_S))
+    else
+    if Tk(s,1) = 'mvs' then
+     Outp.WriteByte(byte(bcMV_S))
+    else
+    if Tk(s,1) = 'mvbps' then
+     Outp.WriteByte(byte(bcMVBP_S))
+    else
+    if Tk(s,1) = 'strl' then
+     Outp.WriteByte(byte(bcSTRL))
+    else
+    if Tk(s,1) = 'strd' then
+     Outp.WriteByte(byte(bcSTRD))
+    else
+    if Tk(s,1) = 'stchatp' then
+     Outp.WriteByte(byte(bcSTCHATP))
+    else
+    if Tk(s,1) = 'stchatk' then
+     Outp.WriteByte(byte(bcSTCHATK))
+    else
+    if Tk(s,1) = 'chord' then
+     Outp.WriteByte(byte(bcCHORD))
+    else
+    if Tk(s,1) = 'ordch' then
+     Outp.WriteByte(byte(bcORDCH))
     else
      if Length(s)>0 then
       AsmError('Invalid token in line: "'+s+'"');
@@ -2253,7 +2832,7 @@ end;
 var
   Code: TStringList;
   c:cardinal;
-  Output:TFileStream;
+  Output:TMemoryStream;
   varmgr:TVarManager;
   Imports:TImportSection;
   CodeSection:TCodeSection;
@@ -2298,7 +2877,7 @@ begin
               'gpm'+sLineBreak+
               'msz'+sLineBreak+
               'gc'+sLineBreak+
-              'pushc main'+slinebreak+
+              'pushc __entrypoint'+slinebreak+
               'gpm'+slinebreak+
               'jc'+sLineBreak+
               'pushc __haltpoint'+sLineBreak+
@@ -2309,10 +2888,10 @@ begin
               'gc';
  code.SaveToFile('buf.tmp');      // Хз почему, но без этого не работает...
  code.LoadFromFile('buf.tmp');    //
- DeleteFile('buf.tmp');
+ DeleteFile('buf.tmp');           //
  if Code.Count>0 then
   begin
-    Output := TFileStream.Create(ChangeFileExt(ParamStr(1),'.vmc'),fmCreate);
+    Output := TMemoryStream.Create;
 
     if ParamCount >= 2 then
      AppMode := LowerCase(ParamStr(2));
@@ -2331,14 +2910,18 @@ begin
           Output.WriteByte(ord('G'));
           Output.WriteByte(ord('U'));
           Output.WriteByte(ord('I'));
+          writeln('Header: SVMEXE / GUI program.');
         end
        else
         begin
           Output.WriteByte(ord('C'));
           Output.WriteByte(ord('N'));
           Output.WriteByte(ord('S'));
+          writeln('Header: SVMEXE / Console program.');
         end;
-     end;
+     end
+    else
+     writeln('Header: SVM / Object file.');
     Imports := TImportSection.Create(Code);
     Imports.ParseSection;
     Imports.GenerateCode(Output);
@@ -2350,6 +2933,7 @@ begin
     CodeSection.ParseSection;
     Constants.CheckForDoubles;
     Constants.GenerateCode(Output);
+    writeln('Constants defined: ',Constants.Constants.Count,'.');
     CodeSection.GenerateCode(Output);
     writeln('Success.');
     Tm2 := Now;
@@ -2358,6 +2942,7 @@ begin
     FreeAndNil(Imports);
     FreeAndNil(Constants);
     FreeAndNil(CodeSection);
+    Output.SaveToFile(ChangeFileExt(ParamStr(1),'.vmc'));
     FreeAndNil(Output);
   end;
  FreeAndNil(Code);
